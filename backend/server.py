@@ -10,13 +10,16 @@
 
 # c) it should also call a function that checks if anything should be created as a friend market as a joke. do things like "lets drive home" --> creates an over under on time till home or like "u talking to a girl" --> will shrey get a girlfriend in 2025 etc. once created, shoudl text the link or smart contract or smth to the group chat as well
 
-# server.py
 import os
 import subprocess
 import json
 from typing import List, Dict, Any
 from flask import Flask, request, jsonify
 import requests
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -30,20 +33,42 @@ def send_imessage(text: str):
     Uses an AppleScript macro to send an iMessage to groupchat.
     Requires macOS host running this backend.
     """
+    # Escape double quotes in the text to prevent breaking the AppleScript string
+    safe_text = text.replace('"', '\\"')
+    
     script = f'''
     tell application "Messages"
         set targetService to 1st service whose service type = iMessage
         set targetBuddy to buddy "+1234567890" of targetService
-        send "{text}" to targetBuddy
+        send "{safe_text}" to targetBuddy
     end tell
     '''
-    subprocess.run(["osascript", "-e", script])
+    try:
+        subprocess.run(["osascript", "-e", script], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error sending iMessage: {e}")
 
 
 def fetch_polymarket_markets() -> List[Dict[str, Any]]:
     """Fetches all polymarket markets."""
     url = "https://gamma-api.polymarket.com/markets?limit=1000"
-    return requests.get(url).json()["data"]
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        
+        # FIX: The API returns a list directly, not {"data": [...]}
+        if isinstance(data, list):
+            return data
+        elif isinstance(data, dict) and "data" in data:
+            return data["data"]
+        else:
+            print("Unexpected API response format")
+            return []
+            
+    except Exception as e:
+        print(f"Error fetching Polymarket data: {e}")
+        return []
 
 
 # -------------------------------------------------------------------------
@@ -55,9 +80,14 @@ def match_statements_to_polymarket(transcript: str, markets: List[Dict[str, Any]
     Returns a list of matched markets with suggested YES/NO positions.
     Uses an intentionally-unhinged LLM to find any remote connection.
     """
+    
+    # Safety check if markets failed to load
+    if not markets:
+        return {"matches": []}
 
     # Format market titles for context
-    market_titles = [m["question"] for m in markets]
+    # Use .get() to avoid KeyErrors if some market objects are malformed
+    market_titles = [m.get("question", "Unknown Market") for m in markets[:200]] # Limit context to 200 to save tokens
     joined_titles = "\n".join(f"- {t}" for t in market_titles)
 
     prompt = f"""
@@ -92,12 +122,14 @@ Output STRICT JSON in this format:
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "HTTP-Referer": "http://localhost:5001",
-        "X-Title": "MBC Backend"
+        "X-Title": "MBC Backend",
+        "Content-Type": "application/json"
     }
     
     data = {
         "model": "openai/gpt-4-turbo",
-        "messages": [{"role": "user", "content": prompt}]
+        "messages": [{"role": "user", "content": prompt}],
+        "response_format": {"type": "json_object"} # Force JSON mode
     }
     
     try:
@@ -108,7 +140,7 @@ Output STRICT JSON in this format:
         )
         response.raise_for_status()
         text = response.json()["choices"][0]["message"]["content"]
-        return eval(text)  # quick-and-dirty hackathon parsing
+        return json.loads(text) # Safer than eval()
     except Exception as e:
         print(f"Error calling OpenRouter: {str(e)}")
         return {"matches": []}
@@ -139,9 +171,6 @@ def execute_polymarket_trade(market_title: str, side: str):
 def detect_friend_market(transcript: str):
     """
     Uses LLM to detect funny/chaotic "friend markets" to create.
-    Example triggers:
-      - "let's drive home" -> create ETA over/under market
-      - "I'm talking to a girl" -> 'Will X get a girlfriend in 2025?'
     """
 
     prompt = f"""
@@ -170,12 +199,14 @@ If one SHOULD be created, return:
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "HTTP-Referer": "http://localhost:5001",
-        "X-Title": "MBC Backend"
+        "X-Title": "MBC Backend",
+        "Content-Type": "application/json"
     }
     
     data = {
         "model": "openai/gpt-4-turbo",
-        "messages": [{"role": "user", "content": prompt}]
+        "messages": [{"role": "user", "content": prompt}],
+        "response_format": {"type": "json_object"}
     }
     
     try:
@@ -186,7 +217,7 @@ If one SHOULD be created, return:
         )
         response.raise_for_status()
         text = response.json()["choices"][0]["message"]["content"]
-        return eval(text)
+        return json.loads(text)
     except Exception as e:
         print(f"Error calling OpenRouter: {str(e)}")
         return {"should_create": False}
@@ -211,34 +242,40 @@ def create_friend_market_onchain(title: str):
 @app.route("/process_transcript", methods=["POST"])
 def process_transcript():
     data = request.json
+    if not data:
+        return jsonify({"error": "No JSON payload provided"}), 400
+        
     transcript = data.get("transcript", "")
+    print(f"🎤 Transcript received: {transcript}")
 
     # 1) Get Polymarket markets
     markets = fetch_polymarket_markets()
+    print(f"✅ Fetched {len(markets)} markets from Polymarket")
 
     # 2A) TRY MATCHING TO POLYMARKET
     match_result = match_statements_to_polymarket(transcript, markets)
-
+    
     created_positions = []
-    for m in match_result["matches"]:
-        receipt = execute_polymarket_trade(
-            m["market_title"],
-            m["recommended_position"]
-        )
-        created_positions.append(receipt)
+    if match_result and "matches" in match_result:
+        for m in match_result["matches"]:
+            receipt = execute_polymarket_trade(
+                m["market_title"],
+                m["recommended_position"]
+            )
+            created_positions.append(receipt)
 
-        # Notify groupchat
-        send_imessage(
-            f"🔮 Auto-bet created!\n"
-            f"Market: {m['market_title']}\n"
-            f"Side: {m['recommended_position']}\n"
-            f"Reason: {m['reasoning']}"
-        )
+            # Notify groupchat
+            send_imessage(
+                f"🔮 Auto-bet created!\n"
+                f"Market: {m['market_title']}\n"
+                f"Side: {m['recommended_position']}\n"
+                f"Reason: {m['reasoning']}"
+            )
 
     # 2C) FRIEND MARKET CHECK
     fm = detect_friend_market(transcript)
     friend_market = None
-    if fm.get("should_create"):
+    if fm and fm.get("should_create"):
         friend_market = create_friend_market_onchain(fm["market_title"])
 
         send_imessage(
