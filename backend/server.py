@@ -92,14 +92,18 @@ def match_statements_to_polymarket(transcript: str, markets: List[Dict[str, Any]
 
     prompt = f"""
 You are an UNHINGED semantic matcher. 
-Your job: connect ANYTHING a human says to ANY relevant prediction market.
-Stretch the meaning aggressively. Examples:
+Your job: connect what a human says to SOMEWHAT relevant prediction market.
+Stretch the meaning quite a lot. Examples:
 
 x) "It's so hot outside" → Bet YES on "2024 will be the hottest year on record."
 y) "This debate is boring" → Bet NO on "Trump/Harris viewership numbers."
 z) "I'm never getting a girlfriend" → Bet YES on "Birth rates drop in 2025."
 a) "I feel tired" → Bet YES on "US recessions probability."
 b) "Traffic sucks today" → Bet YES on "Gas price increase by end of month."
+
+DO NOT make NON OBVIOUS, RANDOM connections. DO MAKE OUTLANDISH connections.
+OUTLANDISH example (VERY GOOD): "I'm never getting a girlfriend" → Bet YES on "Birth rates drop in 2025." (Birth rates arent actually gonna move if you get a girlfriend its negligable) 
+NON OBVIOUS, RANDOM connection (VERY BAD): "I'm never getting a girlfriend" → bet YES on lebron devorcing his wife (THIS IS BAD, this IS NON OBVIOUS and RANDOM)
 
 Given the transcript:
 “{transcript}”
@@ -117,7 +121,12 @@ Output STRICT JSON in this format:
     }}
   ]
 }}
+
 """
+
+    print(f"🎤 Transcript received: {transcript}")
+    print(f"🎤 Markets received: {markets}")
+    print(f"🎤 Prompt: {prompt}")
 
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
@@ -140,11 +149,10 @@ Output STRICT JSON in this format:
         )
         response.raise_for_status()
         text = response.json()["choices"][0]["message"]["content"]
-        return json.loads(text) # Safer than eval()
+        return json.loads(text)
     except Exception as e:
-        print(f"Error calling OpenRouter: {str(e)}")
+        print(f"Error calling OpenRouter (Polymarket Match): {str(e)}")
         return {"matches": []}
-
 
 # -------------------------------------------------------------------------
 # B) EXECUTE POLYMARKET TRADE (stub for hackathon)
@@ -194,7 +202,20 @@ If one SHOULD be created, return:
   "market_type": "YESNO or OVERUNDER",
   "initial_odds": "..."
 }}
+
+
+IMPORTANT: You MUST output valid JSON.
+Format:
+{{
+  "should_create": true,
+  "market_title": "...",
+  "market_type": "YESNO or OVERUNDER",
+  "initial_odds": "0.5"
+}}
+
 """
+
+    print(f"🎤 Prompt: {prompt}")
 
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
