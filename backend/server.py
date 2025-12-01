@@ -13,13 +13,13 @@
 # server.py
 import os
 import subprocess
+import json
 from typing import List, Dict, Any
 from flask import Flask, request, jsonify
 import requests
-from openai import OpenAI
 
 app = Flask(__name__)
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 # -------------------------------------------------------------------------
 # HELPERS
@@ -89,15 +89,28 @@ Output STRICT JSON in this format:
 }}
 """
 
-    resp = client.responses.create(
-        model="gpt-4.1-mini",
-        input=prompt
-    )
-
-    text = resp.output_text
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "HTTP-Referer": "http://localhost:5001",
+        "X-Title": "MBC Backend"
+    }
+    
+    data = {
+        "model": "openai/gpt-4-turbo",
+        "messages": [{"role": "user", "content": prompt}]
+    }
+    
     try:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers=headers,
+            json=data
+        )
+        response.raise_for_status()
+        text = response.json()["choices"][0]["message"]["content"]
         return eval(text)  # quick-and-dirty hackathon parsing
-    except:
+    except Exception as e:
+        print(f"Error calling OpenRouter: {str(e)}")
         return {"matches": []}
 
 
@@ -154,14 +167,28 @@ If one SHOULD be created, return:
 }}
 """
 
-    resp = client.responses.create(
-        model="gpt-4.1-mini",
-        input=prompt
-    )
-
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "HTTP-Referer": "http://localhost:5001",
+        "X-Title": "MBC Backend"
+    }
+    
+    data = {
+        "model": "openai/gpt-4-turbo",
+        "messages": [{"role": "user", "content": prompt}]
+    }
+    
     try:
-        return eval(resp.output_text)
-    except:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers=headers,
+            json=data
+        )
+        response.raise_for_status()
+        text = response.json()["choices"][0]["message"]["content"]
+        return eval(text)
+    except Exception as e:
+        print(f"Error calling OpenRouter: {str(e)}")
         return {"should_create": False}
 
 
