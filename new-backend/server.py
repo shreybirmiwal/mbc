@@ -22,17 +22,19 @@ class FlaunchTokenStore:
         self.apis: Dict[str, dict] = {}
         self.launch_jobs: Dict[str, str] = {}
         self.price_sync_thread = None
-        
+
     def launch_token_on_flaunch(self, api_config: dict) -> dict:
         """Launch a real token on Flaunch for this API"""
         api_name = api_config["name"]
         symbol = api_name[:3].upper() + "API"
         
+        SAFE_IMAGE_HASH = "QmX7UbPKJ7Drci3y6p6E8oi5TpUiG7NH3qSzcohPX9Xkvo"
+        
         launch_data = {
             "name": f"{api_name} Token",
             "symbol": symbol,
             "description": f"Pay with {symbol} to access {api_name}. Token price = API access cost.",
-            "imageIpfs": "QmYA2fn8cMbVWo4v95RwcwJVyQsNtnEwHerfWR8UNtEwoE",
+            "imageIpfs": SAFE_IMAGE_HASH,
             "creatorAddress": api_config["wallet_address"],
             "marketCap": "10000000000",
             "creatorFeeSplit": "8000",
@@ -41,6 +43,7 @@ class FlaunchTokenStore:
         }
         
         print(f"[FLAUNCH] Launching token for {api_name}...")
+        print(f"[DEBUG] Payload: {json.dumps(launch_data)}") # DEBUG PRINT
         
         try:
             response = requests.post(
@@ -59,12 +62,17 @@ class FlaunchTokenStore:
                     print(f"[FLAUNCH] ✗ Launch failed: {result.get('error')}")
                     return None
             else:
+                # RE-ADDED ERROR PRINTING SO WE CAN SEE THE ISSUE
                 print(f"[FLAUNCH] ✗ API error: {response.status_code}")
+                try:
+                    print(f"[DEBUG] Server Response: {response.text}")
+                except:
+                    pass
                 return None
                 
         except Exception as e:
             print(f"[FLAUNCH] ✗ Exception: {str(e)}")
-            return None
+            return None  
     
     def check_launch_status(self, job_id: str) -> Optional[dict]:
         """Check if token launch is complete"""
@@ -74,10 +82,11 @@ class FlaunchTokenStore:
                 headers={"Content-Type": "application/json"},
                 timeout=10
             )
+
+            print("GETTING RESPONSE for job_id: " + job_id)
+            print(response.json())
             
-            if response.status_code == 200:
-                return response.json()
-            return None
+            return response.json()
             
         except Exception as e:
             print(f"[FLAUNCH] Error checking status: {str(e)}")
@@ -301,6 +310,8 @@ def create_api():
     # Launch real token on Flaunch
     launch_result = store.launch_token_on_flaunch(api_config)
     
+    print(launch_result)
+
     if not launch_result:
         return jsonify({
             "error": "Failed to launch token on Flaunch"
@@ -463,6 +474,12 @@ def health():
     })
 
 
+@app.route("/admin/checkjobid", methods=["GET"])
+def check_jobid():
+    job_id = request.json.get("job_id")
+    print("CHECKING JOB ID: " + job_id)
+    return jsonify(store.check_launch_status(job_id))
+
 if __name__ == "__main__":
     # Start price sync thread
     price_thread = threading.Thread(target=store.sync_prices, daemon=True)
@@ -477,4 +494,4 @@ if __name__ == "__main__":
     print(f"Real tokens launched on Flaunch, real prices from DEX")
     print(f"{'='*60}\n")
     
-    app.run(debug=True, port=5000, use_reloader=False)
+    app.run(debug=True, port=5000, use_reloader=True)
