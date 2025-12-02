@@ -1,376 +1,375 @@
 * {
-  box-sizing: border-box;
+    box-sizing: border-box;
 }
 
 body {
-  margin: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: 100vh;
+    margin: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
 }
 
 .app {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
 }
 
 .header {
-  text-align: center;
-  color: white;
-  margin-bottom: 40px;
+    text-align: center;
+    color: white;
+    margin-bottom: 40px;
 }
 
 .header h1 {
-  font-size: 2.5rem;
-  margin: 0 0 10px 0;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    font-size: 2.5rem;
+    margin: 0 0 10px 0;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .header p {
-  font-size: 1.1rem;
-  margin: 0 0 20px 0;
-  opacity: 0.9;
+    font-size: 1.1rem;
+    margin: 0 0 20px 0;
+    opacity: 0.9;
 }
 
 .create-button {
-  background: white;
-  color: #667eea;
-  border: none;
-  padding: 12px 24px;
-  font-size: 1rem;
-  font-weight: 600;
-  border-radius: 8px;
-  cursor: pointer;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s, box-shadow 0.2s;
+    background: white;
+    color: #667eea;
+    border: none;
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .create-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
 .loading {
-  text-align: center;
-  color: white;
-  font-size: 1.5rem;
-  padding: 40px;
+    text-align: center;
+    color: white;
+    font-size: 1.5rem;
+    padding: 40px;
 }
 
 .empty-state {
-  text-align: center;
-  color: white;
-  padding: 60px 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  backdrop-filter: blur(10px);
+    text-align: center;
+    color: white;
+    padding: 60px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
 }
 
 .apis-container {
-  display: grid;
-  gap: 20px;
+    display: grid;
+    gap: 20px;
 }
 
 .api-card {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s, box-shadow 0.2s;
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .api-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
 }
 
 .api-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
 }
 
 .api-card-header h2 {
-  margin: 0 0 8px 0;
-  color: #333;
-  font-size: 1.5rem;
+    margin: 0 0 8px 0;
+    color: #333;
+    font-size: 1.5rem;
 }
 
 .api-endpoint {
-  font-family: 'Courier New', monospace;
-  color: #667eea;
-  font-size: 0.9rem;
-  margin: 4px 0;
-  font-weight: 600;
+    font-family: 'Courier New', monospace;
+    color: #667eea;
+    font-size: 0.9rem;
+    margin: 4px 0;
+    font-weight: 600;
 }
 
 .api-description {
-  color: #666;
-  margin: 8px 0 0 0;
-  font-size: 0.95rem;
+    color: #666;
+    margin: 8px 0 0 0;
+    font-size: 0.95rem;
 }
 
 .status-badge {
-  display: inline-block;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-transform: uppercase;
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
 }
 
 .status-badge.deployed {
-  background: #10b981;
-  color: white;
+    background: #10b981;
+    color: white;
 }
 
 .status-badge.launching {
-  background: #f59e0b;
-  color: white;
+    background: #f59e0b;
+    color: white;
 }
 
 .api-token-info {
-  margin: 16px 0;
-  padding: 12px;
-  background: #f3f4f6;
-  border-radius: 8px;
+    margin: 16px 0;
+    padding: 12px;
+    background: #f3f4f6;
+    border-radius: 8px;
 }
 
 .token-details {
-  display: flex;
-  gap: 16px;
-  align-items: center;
+    display: flex;
+    gap: 16px;
+    align-items: center;
 }
 
 .token-symbol {
-  font-weight: 700;
-  color: #667eea;
-  font-size: 1.1rem;
+    font-weight: 700;
+    color: #667eea;
+    font-size: 1.1rem;
 }
 
 .token-price {
-  color: #333;
-  font-size: 0.95rem;
+    color: #333;
+    font-size: 0.95rem;
 }
 
 .api-links {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #e5e7eb;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
 }
 
 .link-button {
-  display: inline-block;
-  padding: 8px 16px;
-  background: #667eea;
-  color: white;
-  text-decoration: none;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  transition: background 0.2s;
+    display: inline-block;
+    padding: 8px 16px;
+    background: #667eea;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: background 0.2s;
 }
 
 .link-button:hover {
-  background: #5568d3;
+    background: #5568d3;
 }
 
 .toggle-button {
-  padding: 8px 16px;
-  background: #e5e7eb;
-  color: #333;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background 0.2s;
+    padding: 8px 16px;
+    background: #e5e7eb;
+    color: #333;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s;
 }
 
 .toggle-button:hover {
-  background: #d1d5db;
+    background: #d1d5db;
 }
 
 .price-history-section {
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 2px solid #e5e7eb;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 2px solid #e5e7eb;
 }
 
 .price-chart {
-  margin-bottom: 20px;
+    margin-bottom: 20px;
 }
 
 .price-chart h3 {
-  margin: 0 0 16px 0;
-  color: #333;
-  font-size: 1.2rem;
+    margin: 0 0 16px 0;
+    color: #333;
+    font-size: 1.2rem;
 }
 
 .chart-svg {
-  width: 100%;
-  height: auto;
-  max-width: 600px;
+    width: 100%;
+    height: auto;
+    max-width: 600px;
 }
 
 .no-chart-data {
-  padding: 40px;
-  text-align: center;
-  color: #999;
-  background: #f9fafb;
-  border-radius: 8px;
+    padding: 40px;
+    text-align: center;
+    color: #999;
+    background: #f9fafb;
+    border-radius: 8px;
 }
 
 .price-stats {
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
 }
 
 .stat {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .stat label {
-  font-size: 0.85rem;
-  color: #666;
-  font-weight: 600;
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 600;
 }
 
 .stat span {
-  font-size: 1.1rem;
-  color: #333;
-  font-weight: 700;
+    font-size: 1.1rem;
+    color: #333;
+    font-weight: 700;
 }
 
 .stat span.positive {
-  color: #10b981;
+    color: #10b981;
 }
 
 .stat span.negative {
-  color: #ef4444;
+    color: #ef4444;
 }
 
 .create-form-container {
-  background: white;
-  border-radius: 12px;
-  padding: 32px;
-  margin-bottom: 32px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background: white;
+    border-radius: 12px;
+    padding: 32px;
+    margin-bottom: 32px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .create-form h2 {
-  margin: 0 0 24px 0;
-  color: #333;
-  font-size: 1.8rem;
+    margin: 0 0 24px 0;
+    color: #333;
+    font-size: 1.8rem;
 }
 
 .form-group {
-  margin-bottom: 20px;
+    margin-bottom: 20px;
 }
 
 .form-group label {
-  display: block;
-  margin-bottom: 8px;
-  color: #333;
-  font-weight: 600;
-  font-size: 0.95rem;
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+    font-weight: 600;
+    font-size: 0.95rem;
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border: 2px solid #e5e7eb;
-  border-radius: 6px;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-  font-family: inherit;
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+    font-family: inherit;
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
-  outline: none;
-  border-color: #667eea;
+    outline: none;
+    border-color: #667eea;
 }
 
 .form-group textarea {
-  resize: vertical;
-  min-height: 80px;
+    resize: vertical;
+    min-height: 80px;
 }
 
 .form-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 24px;
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
 }
 
 .submit-button {
-  flex: 1;
-  padding: 12px 24px;
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
+    flex: 1;
+    padding: 12px 24px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
 }
 
 .submit-button:hover {
-  background: #5568d3;
+    background: #5568d3;
 }
 
 .cancel-button {
-  flex: 1;
-  padding: 12px 24px;
-  background: #e5e7eb;
-  color: #333;
-  border: none;
-  border-radius: 6px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
+    flex: 1;
+    padding: 12px 24px;
+    background: #e5e7eb;
+    color: #333;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
 }
 
 .cancel-button:hover {
-  background: #d1d5db;
+    background: #d1d5db;
 }
 
 @media (max-width: 768px) {
-  .app {
-    padding: 12px;
-  }
+    .app {
+        padding: 12px;
+    }
 
-  .header h1 {
-    font-size: 2rem;
-  }
+    .header h1 {
+        font-size: 2rem;
+    }
 
-  .api-card-header {
-    flex-direction: column;
-    gap: 12px;
-  }
+    .api-card-header {
+        flex-direction: column;
+        gap: 12px;
+    }
 
-  .api-links {
-    flex-direction: column;
-  }
+    .api-links {
+        flex-direction: column;
+    }
 
-  .link-button,
-  .toggle-button {
-    width: 100%;
-    text-align: center;
-  }
+    .link-button,
+    .toggle-button {
+        width: 100%;
+        text-align: center;
+    }
 
-  .chart-svg {
-    max-width: 100%;
-  }
+    .chart-svg {
+        max-width: 100%;
+    }
 }
-

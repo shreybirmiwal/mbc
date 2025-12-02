@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://127.0.0.1:5000';
 
 function App() {
   const [apis, setApis] = useState([]);
@@ -61,7 +61,7 @@ function App() {
       });
 
       if (response.ok) {
-        const result = await response.json();
+        await response.json(); // Consume response
         alert('API created successfully!');
         setShowCreateForm(false);
         fetchApis(); // Refresh the list
