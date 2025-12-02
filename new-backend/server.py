@@ -53,48 +53,88 @@ class TokenStore:
 
 store = TokenStore()
 
-# Custom middleware for x402 payment verification
-def require_payment_dynamic(endpoint: str):
-    """Decorator that checks payment based on current token price"""
-    def decorator(func: Callable):
-        def wrapper(*args, **kwargs):
-            # Check if this endpoint has an API config
-            if endpoint not in store.apis:
-                return jsonify({"error": "API not found"}), 404
-            
-            api_config = store.apis[endpoint]
-            token_id = api_config["token_id"]
-            current_price = store.get_price(token_id)
-            
-            # Check for payment header
-            payment_header = request.headers.get("X-PAYMENT")
-            
-            if not payment_header:
-                # Return 402 with payment requirements
-                return jsonify({
-                    "error": "Payment Required",
-                    "payment_details": {
-                        "endpoint": endpoint,
-                        "price_usd": f"${current_price:.6f}",
-                        "token": store.tokens[token_id]["symbol"],
-                        "token_id": token_id,
-                        "pay_to_address": api_config["wallet_address"],
-                        "network": "base-sepolia",
-                        "facilitator": "https://x402.org/facilitator",
-                        "description": api_config.get("description", "API access")
-                    }
-                }), 402
-            
-            # In real implementation, verify payment here
-            # For demo, we just check if header exists
-            print(f"[PAYMENT] Received payment for {endpoint}: ${current_price:.6f}")
-            
-            # Payment verified, execute the actual endpoint
-            return func(*args, **kwargs)
-        
-        wrapper.__name__ = func.__name__
-        return wrapper
-    return decorator
+# Predefined handlers
+def weather_handler():
+    return jsonify({
+        "weather": "sunny",
+        "temperature": 72,
+        "location": "San Francisco"
+    })
+
+def random_number_handler():
+    return jsonify({
+        "number": random.randint(1, 100)
+    })
+
+def default_handler(endpoint):
+    return jsonify({
+        "message": "API response",
+        "endpoint": endpoint,
+        "timestamp": time.time()
+    })
+
+HANDLERS = {
+    "weather_data": weather_handler,
+    "random_number": random_number_handler,
+    "default": default_handler
+}
+
+
+def require_payment(endpoint: str):
+    """Check payment based on current token price"""
+    if endpoint not in store.apis:
+        return jsonify({"error": "API not found"}), 404
+    
+    api_config = store.apis[endpoint]
+    token_id = api_config["token_id"]
+    current_price = store.get_price(token_id)
+    
+    # Check for payment header
+    payment_header = request.headers.get("X-PAYMENT")
+    
+    if not payment_header:
+        # Return 402 with payment requirements
+        return jsonify({
+            "error": "Payment Required",
+            "payment_details": {
+                "endpoint": endpoint,
+                "price_usd": f"${current_price:.6f}",
+                "token": store.tokens[token_id]["symbol"],
+                "token_id": token_id,
+                "pay_to_address": api_config["wallet_address"],
+                "network": "base-sepolia",
+                "facilitator": "https://x402.org/facilitator",
+                "description": api_config.get("description", "API access")
+            }
+        }), 402
+    
+    # In real implementation, verify payment here
+    # For demo, we just check if header exists
+    print(f"[PAYMENT] Received payment for {endpoint}: ${current_price:.6f}")
+    return None  # Payment verified
+
+
+# Dynamic catch-all route
+@app.route("/<path:endpoint>", methods=["GET", "POST"])
+def dynamic_api(endpoint):
+    """Handle all dynamic API endpoints"""
+    endpoint = "/" + endpoint
+    
+    # Check payment first
+    payment_check = require_payment(endpoint)
+    if payment_check:
+        return payment_check
+    
+    # Payment verified, execute handler
+    api_config = store.apis[endpoint]
+    handler_type = api_config.get("handler", "default")
+    handler = HANDLERS.get(handler_type, HANDLERS["default"])
+    
+    # Call handler (pass endpoint for default handler)
+    if handler_type == "default":
+        return handler(endpoint)
+    else:
+        return handler()
 
 
 # Admin endpoint to create new APIs dynamically
@@ -122,6 +162,10 @@ def create_api():
     if not endpoint.startswith("/"):
         endpoint = "/" + endpoint
     
+    # Check if endpoint already exists
+    if endpoint in store.apis:
+        return jsonify({"error": "Endpoint already exists"}), 400
+    
     # Create token for this API
     token_id = store.create_token(data["name"])
     
@@ -135,10 +179,9 @@ def create_api():
         "handler": data.get("handler", "default")
     }
     
-    # Register the route dynamically
-    register_dynamic_route(endpoint, data.get("handler", "default"))
-    
     token_info = store.tokens[token_id]
+    
+    print(f"[API CREATED] {endpoint} with token {token_info['symbol']} at ${token_info['price_usd']:.6f}")
     
     return jsonify({
         "success": True,
@@ -154,41 +197,6 @@ def create_api():
             "test_request": f"curl -X GET http://localhost:5000{endpoint}"
         }
     }), 201
-
-
-def register_dynamic_route(endpoint: str, handler_type: str):
-    """Register a new route dynamically with payment middleware"""
-    
-    # Define different handlers
-    handlers = {
-        "weather_data": lambda: jsonify({
-            "weather": "sunny",
-            "temperature": 72,
-            "location": "San Francisco"
-        }),
-        "random_number": lambda: jsonify({
-            "number": random.randint(1, 100)
-        }),
-        "default": lambda: jsonify({
-            "message": "API response",
-            "endpoint": endpoint
-        })
-    }
-    
-    handler_func = handlers.get(handler_type, handlers["default"])
-    
-    # Apply payment middleware
-    protected_handler = require_payment_dynamic(endpoint)(handler_func)
-    
-    # Register the route
-    app.add_url_rule(
-        endpoint,
-        endpoint=endpoint.replace("/", "_"),
-        view_func=protected_handler,
-        methods=["GET"]
-    )
-    
-    print(f"[ROUTE REGISTERED] {endpoint} with dynamic pricing")
 
 
 # List all APIs
@@ -224,7 +232,8 @@ def health():
         "endpoints": {
             "create_api": "POST /admin/create-api",
             "list_apis": "GET /admin/list-apis"
-        }
+        },
+        "active_apis": len(store.apis)
     })
 
 
