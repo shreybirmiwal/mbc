@@ -1,116 +1,253 @@
-import uvicorn
-from fastapi import FastAPI, HTTPException, Request, Header
-from typing import Dict, Any, Optional
+"""
+x402 Dynamic API Server with Token-Based Pricing
 
-app = FastAPI()
+This server demonstrates:
+1. Creating APIs dynamically at runtime
+2. Each API gets its own token with dynamic pricing
+3. Price updates automatically based on token value
+"""
 
-# ---------------------------------------------------------
-# 1. In-Memory Database & State
-# ---------------------------------------------------------
-CONTENT_REGISTRY: Dict[str, Any] = {}
+from flask import Flask, request, jsonify
+import threading
+import time
+import random
+from typing import Dict, Callable
 
-# SIMULATION STATE: We store the "current market price" here.
-# In production, this variable would be updated by a background task
-# fetching from CoinGecko/Chainlink every 60 seconds.
-MARKET_PRICE_ETH = 2000.0
+app = Flask(__name__)
 
-# ---------------------------------------------------------
-# 2. Dynamic Price Calculator
-# ---------------------------------------------------------
-def get_dynamic_price_in_eth(base_price_usd: float) -> str:
-    # 1. Use the global "live" price
-    global MARKET_PRICE_ETH
-    
-    # Safety check to prevent division by zero
-    if MARKET_PRICE_ETH <= 0:
-        return "0.000000"
+# Store for dynamic routes and their tokens
+class TokenStore:
+    def __init__(self):
+        self.tokens: Dict[str, dict] = {}
+        self.apis: Dict[str, dict] = {}
+        self.price_update_thread = None
         
-    # 2. Calculate exact ETH amount needed
-    amount_eth = base_price_usd / MARKET_PRICE_ETH
+    def create_token(self, api_name: str) -> str:
+        token_id = f"TOKEN_{api_name.upper().replace(' ', '_')}"
+        self.tokens[token_id] = {
+            "id": token_id,
+            "name": f"{api_name} Token",
+            "symbol": api_name[:3].upper() + "T",
+            "price_usd": round(random.uniform(0.001, 0.01), 6),
+            "volatility": random.uniform(0.05, 0.15)  # 5-15% price changes
+        }
+        return token_id
     
-    # 3. Format strictly as string for x402 (e.g., "0.005000")
-    return f"{amount_eth:.6f}"
-
-# ---------------------------------------------------------
-# 3. The "Oracle" Endpoint (For Testing/Simulation)
-# ---------------------------------------------------------
-# CHANGED TO @app.get SO YOU CAN PASTE IN BROWSER
-@app.get("/oracle/set-price")
-async def set_market_price(price: float):
-    """
-    Simulates the market moving. Call this to change the price of ETH.
-    Usage: /oracle/set-price?price=1000
-    """
-    global MARKET_PRICE_ETH
-    MARKET_PRICE_ETH = price
-    return {"status": "market_updated", "current_eth_price": MARKET_PRICE_ETH}
-
-# ---------------------------------------------------------
-# 4. The "Create" Endpoint
-# ---------------------------------------------------------
-# CHANGED TO @app.get SO YOU CAN PASTE IN BROWSER
-@app.get("/create-paywall")
-async def create_paywall(paywall_id: str, content: str, price_usd: float, wallet: str):
-    """
-    Creates a new paywall configuration.
-    Usage: /create-paywall?paywall_id=test1&content=Secret&price_usd=20&wallet=0x123
-    """
-    if paywall_id in CONTENT_REGISTRY:
-        # For demo purposes, we'll just update it if it exists so you don't get errors retrying
-        pass
+    def get_price(self, token_id: str) -> float:
+        """Get current price in USD"""
+        if token_id in self.tokens:
+            return self.tokens[token_id]["price_usd"]
+        return 0.001
     
-    CONTENT_REGISTRY[paywall_id] = {
-        "content": content,
-        "base_price_usd": price_usd,
-        "wallet_address": wallet
+    def update_prices(self):
+        """Simulate price updates (runs in background)"""
+        while True:
+            time.sleep(5)  # Update every 5 seconds
+            for token_id, token in self.tokens.items():
+                # Simulate price volatility
+                change = random.uniform(-token["volatility"], token["volatility"])
+                new_price = token["price_usd"] * (1 + change)
+                # Keep price above minimum
+                token["price_usd"] = max(0.0001, round(new_price, 6))
+                print(f"[PRICE UPDATE] {token['symbol']}: ${token['price_usd']:.6f}")
+
+store = TokenStore()
+
+# Custom middleware for x402 payment verification
+def require_payment_dynamic(endpoint: str):
+    """Decorator that checks payment based on current token price"""
+    def decorator(func: Callable):
+        def wrapper(*args, **kwargs):
+            # Check if this endpoint has an API config
+            if endpoint not in store.apis:
+                return jsonify({"error": "API not found"}), 404
+            
+            api_config = store.apis[endpoint]
+            token_id = api_config["token_id"]
+            current_price = store.get_price(token_id)
+            
+            # Check for payment header
+            payment_header = request.headers.get("X-PAYMENT")
+            
+            if not payment_header:
+                # Return 402 with payment requirements
+                return jsonify({
+                    "error": "Payment Required",
+                    "payment_details": {
+                        "endpoint": endpoint,
+                        "price_usd": f"${current_price:.6f}",
+                        "token": store.tokens[token_id]["symbol"],
+                        "token_id": token_id,
+                        "pay_to_address": api_config["wallet_address"],
+                        "network": "base-sepolia",
+                        "facilitator": "https://x402.org/facilitator",
+                        "description": api_config.get("description", "API access")
+                    }
+                }), 402
+            
+            # In real implementation, verify payment here
+            # For demo, we just check if header exists
+            print(f"[PAYMENT] Received payment for {endpoint}: ${current_price:.6f}")
+            
+            # Payment verified, execute the actual endpoint
+            return func(*args, **kwargs)
+        
+        wrapper.__name__ = func.__name__
+        return wrapper
+    return decorator
+
+
+# Admin endpoint to create new APIs dynamically
+@app.route("/admin/create-api", methods=["POST"])
+def create_api():
+    """
+    Create a new API endpoint with its own token and dynamic pricing
+    
+    Request body:
+    {
+        "name": "Weather API",
+        "endpoint": "/weather",
+        "wallet_address": "0xYourAddress",
+        "description": "Get weather data",
+        "handler": "weather_data"  # predefined handler
     }
-    return {"status": "created", "url": f"/access/{paywall_id}"}
-
-# ---------------------------------------------------------
-# 5. The Dynamic "Gate" Endpoint
-# ---------------------------------------------------------
-@app.get("/access/{paywall_id}")
-async def access_content(
-    paywall_id: str, 
-    request: Request,
-    # x402 clients verify payment via these headers
-    x_payment_token: Optional[str] = Header(None, alias="X-Payment-Token") 
-):
-    # A. Retrieve Configuration
-    item = CONTENT_REGISTRY.get(paywall_id)
-    if not item:
-        raise HTTPException(status_code=404, detail="Content not found")
+    """
+    data = request.json
     
-    # B. Calculate REAL-TIME Price
-    # This runs NOW, using whatever MARKET_PRICE_ETH is currently set to.
-    current_price_eth = get_dynamic_price_in_eth(item["base_price_usd"])
+    required_fields = ["name", "endpoint", "wallet_address"]
+    if not all(field in data for field in required_fields):
+        return jsonify({"error": "Missing required fields"}), 400
     
-    # C. CHECK PAYMENT (The x402 Logic)
-    if not x_payment_token:
-        raise HTTPException(
-            status_code=402,
-            detail="Payment Required",
-            headers={
-                # x402 Standard Headers
-                "x402-price": current_price_eth,
-                "x402-currency": "ETH",
-                "x402-network": "base-sepolia",
-                "x402-recipient": item["wallet_address"],
-                # Standard HTTP 402 Headers
-                "WWW-Authenticate": f'Token realm="x402", price="{current_price_eth}", currency="ETH"'
-            }
-        )
-
-    # D. VERIFY PAYMENT (Future Step)
-    # verify_x402_token(x_payment_token, expected_amount=current_price_eth)
+    endpoint = data["endpoint"]
+    if not endpoint.startswith("/"):
+        endpoint = "/" + endpoint
     
-    # E. Return Content
-    return {
-        "content": item["content"],
-        "status": "unlocked", 
-        "paid_amount": current_price_eth,
-        "market_price_used": MARKET_PRICE_ETH
+    # Create token for this API
+    token_id = store.create_token(data["name"])
+    
+    # Store API configuration
+    store.apis[endpoint] = {
+        "name": data["name"],
+        "endpoint": endpoint,
+        "token_id": token_id,
+        "wallet_address": data["wallet_address"],
+        "description": data.get("description", ""),
+        "handler": data.get("handler", "default")
     }
+    
+    # Register the route dynamically
+    register_dynamic_route(endpoint, data.get("handler", "default"))
+    
+    token_info = store.tokens[token_id]
+    
+    return jsonify({
+        "success": True,
+        "api": {
+            "name": data["name"],
+            "endpoint": endpoint,
+            "token": {
+                "id": token_id,
+                "symbol": token_info["symbol"],
+                "current_price_usd": token_info["price_usd"]
+            },
+            "wallet_address": data["wallet_address"],
+            "test_request": f"curl -X GET http://localhost:5000{endpoint}"
+        }
+    }), 201
+
+
+def register_dynamic_route(endpoint: str, handler_type: str):
+    """Register a new route dynamically with payment middleware"""
+    
+    # Define different handlers
+    handlers = {
+        "weather_data": lambda: jsonify({
+            "weather": "sunny",
+            "temperature": 72,
+            "location": "San Francisco"
+        }),
+        "random_number": lambda: jsonify({
+            "number": random.randint(1, 100)
+        }),
+        "default": lambda: jsonify({
+            "message": "API response",
+            "endpoint": endpoint
+        })
+    }
+    
+    handler_func = handlers.get(handler_type, handlers["default"])
+    
+    # Apply payment middleware
+    protected_handler = require_payment_dynamic(endpoint)(handler_func)
+    
+    # Register the route
+    app.add_url_rule(
+        endpoint,
+        endpoint=endpoint.replace("/", "_"),
+        view_func=protected_handler,
+        methods=["GET"]
+    )
+    
+    print(f"[ROUTE REGISTERED] {endpoint} with dynamic pricing")
+
+
+# List all APIs
+@app.route("/admin/list-apis", methods=["GET"])
+def list_apis():
+    """List all created APIs and their current prices"""
+    apis_info = []
+    for endpoint, api_config in store.apis.items():
+        token_id = api_config["token_id"]
+        token = store.tokens[token_id]
+        apis_info.append({
+            "name": api_config["name"],
+            "endpoint": endpoint,
+            "token": {
+                "symbol": token["symbol"],
+                "current_price_usd": token["price_usd"]
+            },
+            "wallet_address": api_config["wallet_address"]
+        })
+    
+    return jsonify({
+        "total_apis": len(apis_info),
+        "apis": apis_info
+    })
+
+
+# Health check
+@app.route("/", methods=["GET"])
+def health():
+    return jsonify({
+        "status": "running",
+        "message": "x402 Dynamic API Server",
+        "endpoints": {
+            "create_api": "POST /admin/create-api",
+            "list_apis": "GET /admin/list-apis"
+        }
+    })
+
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Start price update thread
+    price_thread = threading.Thread(target=store.update_prices, daemon=True)
+    price_thread.start()
+    
+    print("=" * 60)
+    print("x402 Dynamic API Server Starting...")
+    print("=" * 60)
+    print("\nCreate an API with:")
+    print("""
+curl -X POST http://localhost:5000/admin/create-api \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "Weather API",
+    "endpoint": "/weather",
+    "wallet_address": "0x1234567890abcdef",
+    "description": "Get weather data",
+    "handler": "weather_data"
+  }'
+    """)
+    print("\n" + "=" * 60)
+    
+    app.run(debug=True, port=5000, use_reloader=False)
