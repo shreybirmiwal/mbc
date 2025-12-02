@@ -162,7 +162,8 @@ class FlaunchTokenStore:
         
         # === CRITICAL FIX: Don't check for state == "completed" ===
         if status and status.get("success"):
-            token_info = status.get("collectionToken", {})
+            # FIX: Handle case where collectionToken is None (explicit null from API)
+            token_info = status.get("collectionToken") or {} 
             token_address = token_info.get("address")
             
             # If Flaunch gave us an address, IT IS LAUNCHED.
@@ -182,7 +183,6 @@ class FlaunchTokenStore:
                 return True
             
         return False
-
 
 store = FlaunchTokenStore()
 
@@ -339,12 +339,26 @@ def create_api():
     print(f"[API CREATED] {endpoint} -> {target_url}")
     print(f"[API CREATED] Token launching (Job: {api_config['job_id']})")
     
-    # === THIS WAS MISSING ===
-    # Wait 4 seconds for blockchain to catch up, then CALL FINALIZE
-    print("[FLAUNCH] Waiting 4s for deployment...")
-    time.sleep(4)
-    store.finalize_token_launch(endpoint)
-    # ========================
+# === POLLING LOGIC START ===
+    print("[FLAUNCH] Polling for deployment completion...")
+    
+    timeout = 60  # Maximum wait time in seconds
+    start_time = time.time()
+    deployed = False
+
+    while time.time() - start_time < timeout:
+        # Check if finalized (returns True if token_address is set)
+        if store.finalize_token_launch(endpoint):
+            deployed = True
+            print(f"[FLAUNCH] ✓ Deployment confirmed in {int(time.time() - start_time)}s")
+            break
+        
+        # Wait 2 seconds before checking again
+        time.sleep(2)
+        
+    if not deployed:
+        print("[FLAUNCH] ⚠ Deployment pending or taking longer than expected.")
+    # === POLLING LOGIC END ===
 
     return jsonify({
         "success": True,
@@ -354,12 +368,12 @@ def create_api():
             "target_url": target_url,
             "method": api_config["method"],
             "wallet_address": data["wallet_address"],
-            "launch_status": "pending",
+            "launch_status": "deployed" if deployed else "pending",
             "job_id": api_config["job_id"],
-            "queue_position": api_config["queue_position"],
+            "token_address": api_config.get("token_address"), # Include address if found
             "check_status": f"GET /admin/api-status{endpoint}"
         },
-        "message": "Token launch initiated. API will be active once token is deployed."
+        "message": "Token launch initiated." if not deployed else "Token launched and API active."
     }), 201
 
 
