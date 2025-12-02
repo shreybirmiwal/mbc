@@ -168,16 +168,20 @@ class FlaunchTokenStore:
         if not token_address:
             return
         
-        price_eth = api_config.get("price_eth", 0.0001)
+        # Get USD price directly from price_data (Flaunch API returns prices in USD)
+        price_data = api_config.get("price_data", {})
+        price_usd = price_data.get("price_usd", 0)
         
-        # Convert ETH price to USD (approximate: 1 ETH = $3000)
-        # In production, you'd fetch real ETH/USD rate
-        eth_to_usd = 3000
-        price_usd = price_eth * eth_to_usd
+        if price_usd <= 0:
+            # Fallback to old method if price_data not available
+            price_eth = api_config.get("price_eth", 0.0001)
+            eth_to_usd = 3000
+            price_usd = price_eth * eth_to_usd
+        
         price_str = f"${price_usd:.6f}"
         
         # Add/update payment middleware for this route
-        # Note: x402 accepts USDC payment, but amount is based on Flaunch token price
+        # Note: x402 accepts USDC payment, amount is based on Flaunch token price in USD
         self.payment_middleware.add(
             path=endpoint,
             price=price_str,
@@ -185,7 +189,8 @@ class FlaunchTokenStore:
             network="base-sepolia" if NETWORK == "base-sepolia" else "base"
         )
         
-        print(f"[x402] Updated payment route: {endpoint} -> {price_str} (based on {price_eth:.8f} ETH worth of {api_config['symbol']})")
+        price_eth_display = price_data.get("price_eth", price_usd / 3000)
+        print(f"[x402] Updated payment route: {endpoint} -> {price_str} (based on ${price_usd:.2f} price of {api_config.get('symbol', 'token')})")
     
     def finalize_token_launch(self, endpoint: str):
         if endpoint not in self.apis:
@@ -520,7 +525,7 @@ def get_api_info(endpoint):
         
         full_data = response.json()
         
-        # Flaunch API returns prices in USD/USDC, convert to ETH
+        # Flaunch API returns prices in USD/USDC (field name "priceETH" is misleading)
         # Approximate ETH price in USD (in production, fetch real-time rate)
         eth_price_usd = 3000
         
@@ -529,7 +534,7 @@ def get_api_info(endpoint):
         all_time_high_usd = float(full_data.get("price", {}).get("allTimeHigh", 0))
         all_time_low_usd = float(full_data.get("price", {}).get("allTimeLow", 0))
         
-        # Convert from USD to ETH
+        # Convert from USD to ETH for display purposes
         price_eth = price_usd / eth_price_usd if eth_price_usd > 0 else 0
         market_cap_eth = market_cap_usd / eth_price_usd if eth_price_usd > 0 else 0
         all_time_high_eth = all_time_high_usd / eth_price_usd if eth_price_usd > 0 else 0
@@ -545,7 +550,9 @@ def get_api_info(endpoint):
             "payment_protocol": "x402",
             "x402_enabled": True,
             "current_price": {
-                "price_eth": price_eth,
+                "price_usd": price_usd,  # Primary price in USD (what x402 uses)
+                "price_eth": price_eth,  # Also show in ETH for reference
+                "market_cap_usd": market_cap_usd,
                 "market_cap_eth": market_cap_eth,
                 "price_change_24h": float(full_data.get("price", {}).get("priceChange24h", 0)),
                 "price_change_24h_percentage": float(full_data.get("price", {}).get("priceChange24hPercentage", 0)),
