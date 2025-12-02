@@ -18,6 +18,7 @@ import time
 import requests
 from typing import Dict, Optional
 import json
+import os
 from x402.flask.middleware import PaymentMiddleware
 
 app = Flask(__name__)
@@ -29,11 +30,91 @@ NETWORK = "base"  # Change to "base-sepolia" for testnet
 FACILITATOR_URL = "https://x402.org/facilitator"  # For testnet
 
 class FlaunchTokenStore:
-    def __init__(self):
+    def __init__(self, preexisting_routes_file: Optional[str] = None):
         self.apis: Dict[str, dict] = {}
         self.launch_jobs: Dict[str, str] = {}
         self.price_sync_thread = None
         self.payment_middleware = PaymentMiddleware(app)
+        
+        # Load pre-existing routes if file is provided
+        if preexisting_routes_file is None:
+            # Default to preexisting_routes.json in the same directory
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            preexisting_routes_file = os.path.join(script_dir, "preexisting_routes.json")
+        
+        self.load_preexisting_routes(preexisting_routes_file)
+    
+    def load_preexisting_routes(self, routes_file: str):
+        """Load pre-existing API routes from a JSON file"""
+        if not os.path.exists(routes_file):
+            print(f"[INIT] No pre-existing routes file found at {routes_file}")
+            return
+        
+        try:
+            with open(routes_file, 'r') as f:
+                routes = json.load(f)
+            
+            if not isinstance(routes, list):
+                print(f"[INIT] Invalid format: routes file should contain a JSON array")
+                return
+            
+            loaded_count = 0
+            for route in routes:
+                # Validate required fields
+                required_fields = ["name", "endpoint", "target_url", "wallet_address", "token_address"]
+                if not all(field in route for field in required_fields):
+                    print(f"[INIT] Skipping route {route.get('name', 'unknown')}: missing required fields")
+                    continue
+                
+                endpoint = route["endpoint"]
+                if not endpoint.startswith("/"):
+                    endpoint = "/" + endpoint
+                
+                # Skip if endpoint already exists
+                if endpoint in self.apis:
+                    print(f"[INIT] Skipping route {endpoint}: already exists")
+                    continue
+                
+                # Create API config from pre-existing route
+                api_config = {
+                    "name": route["name"],
+                    "endpoint": endpoint,
+                    "target_url": route["target_url"],
+                    "method": route.get("method", "GET").upper(),
+                    "wallet_address": route["wallet_address"],
+                    "description": route.get("description", ""),
+                    "token_address": route["token_address"],
+                    "symbol": route.get("symbol", route["name"][:3].upper() + "API"),
+                    "token_uri": route.get("token_uri"),
+                    "tx_hash": route.get("tx_hash"),
+                    "flaunch_link": route.get("flaunch_link", f"https://flaunch.gg/token/{route['token_address']}"),
+                    "created_at": route.get("created_at", time.time()),
+                    "preexisting": True  # Mark as pre-existing
+                }
+                
+                # Fetch initial price data for the token
+                price_data = self.get_token_price_data(route["token_address"])
+                if price_data:
+                    api_config["price_data"] = price_data
+                    api_config["price_usd"] = price_data["price_usd"]
+                    api_config["price_eth"] = price_data["price_eth"]
+                    print(f"[INIT] Loaded {route['name']} ({endpoint}) - Price: ${price_data['price_usd']:.6f} USD ({price_data['price_eth']:.8f} ETH)")
+                else:
+                    # Use default price if unavailable
+                    default_price_usd = route.get("price_usd", 0.01)
+                    api_config["price_usd"] = default_price_usd
+                    api_config["price_eth"] = default_price_usd / 3000  # Approximate conversion
+                    print(f"[INIT] Loaded {route['name']} ({endpoint}) - Price data unavailable, using default ${default_price_usd:.6f} USD")
+                
+                self.apis[endpoint] = api_config
+                loaded_count += 1
+            
+            print(f"[INIT] Loaded {loaded_count} pre-existing API route(s)")
+            
+        except json.JSONDecodeError as e:
+            print(f"[INIT] Error parsing JSON file {routes_file}: {str(e)}")
+        except Exception as e:
+            print(f"[INIT] Error loading pre-existing routes from {routes_file}: {str(e)}")
 
     def launch_token_on_flaunch(self, api_config: dict) -> dict:
         """Launch a real token on Flaunch for this API"""

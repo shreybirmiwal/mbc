@@ -17,10 +17,11 @@ function App() {
     try {
       const response = await fetch(`${API_BASE_URL}/admin/list-apis`);
       const data = await response.json();
-      setApis(data.apis || []);
-      
+      const apisList = data.apis || [];
+      setApis(apisList);
+
       // Fetch detailed info for each API
-      const detailsPromises = data.apis.map(async (api) => {
+      const detailsPromises = apisList.map(async (api) => {
         if (api.token?.address) {
           try {
             const endpoint = api.endpoint.replace(/^\//, ''); // Remove leading slash
@@ -35,7 +36,7 @@ function App() {
         }
         return { endpoint: api.endpoint, info: null };
       });
-      
+
       const details = await Promise.all(detailsPromises);
       const detailsMap = {};
       details.forEach(({ endpoint, info }) => {
@@ -83,7 +84,7 @@ function App() {
       <header className="header">
         <h1>API Marketplace</h1>
         <p>Token-based API access powered by x402 & Flaunch</p>
-        <button 
+        <button
           className="create-button"
           onClick={() => setShowCreateForm(!showCreateForm)}
         >
@@ -92,7 +93,7 @@ function App() {
       </header>
 
       {showCreateForm && (
-        <CreateAPIForm 
+        <CreateAPIForm
           onSubmit={handleCreateAPI}
           onCancel={() => setShowCreateForm(false)}
         />
@@ -105,9 +106,9 @@ function App() {
           </div>
         ) : (
           apis.map((api) => (
-            <APICard 
-              key={api.endpoint} 
-              api={api} 
+            <APICard
+              key={api.endpoint}
+              api={api}
               details={apiDetails[api.endpoint]}
             />
           ))
@@ -151,25 +152,25 @@ function APICard({ api, details }) {
       )}
 
       <div className="api-links">
-        <a 
-          href={apiUrl} 
-          target="_blank" 
+        <a
+          href={apiUrl}
+          target="_blank"
           rel="noopener noreferrer"
           className="link-button"
         >
           🔗 API Endpoint (x402)
         </a>
         {flaunchLink && (
-          <a 
-            href={flaunchLink} 
-            target="_blank" 
+          <a
+            href={flaunchLink}
+            target="_blank"
             rel="noopener noreferrer"
             className="link-button"
           >
             📊 View on Flaunch
           </a>
         )}
-        <button 
+        <button
           className="toggle-button"
           onClick={() => setExpanded(!expanded)}
         >
@@ -309,7 +310,7 @@ function CreateAPIForm({ onSubmit, onCancel }) {
     <div className="create-form-container">
       <form className="create-form" onSubmit={handleSubmit}>
         <h2>Create New API</h2>
-        
+
         <div className="form-group">
           <label>API Name *</label>
           <input
