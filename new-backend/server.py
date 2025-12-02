@@ -9,6 +9,7 @@ import time
 import requests
 from typing import Dict, Optional
 import json
+import os
 
 app = Flask(__name__)
 
@@ -19,10 +20,86 @@ FLAUNCH_DATA_API = "https://dev-api.flayerlabs.xyz/v1"
 NETWORK = "base"
 
 class FlaunchTokenStore:
-    def __init__(self):
+    def __init__(self, preexisting_routes_file: Optional[str] = None):
         self.apis: Dict[str, dict] = {}
         self.launch_jobs: Dict[str, str] = {}
         self.price_sync_thread = None
+        
+        # Load pre-existing routes if file is provided
+        if preexisting_routes_file is None:
+            # Default to preexisting_routes.json in the same directory
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            preexisting_routes_file = os.path.join(script_dir, "preexisting_routes.json")
+        
+        self.load_preexisting_routes(preexisting_routes_file)
+    
+    def load_preexisting_routes(self, routes_file: str):
+        """Load pre-existing API routes from a JSON file"""
+        if not os.path.exists(routes_file):
+            print(f"[INIT] No pre-existing routes file found at {routes_file}")
+            return
+        
+        try:
+            with open(routes_file, 'r') as f:
+                routes = json.load(f)
+            
+            if not isinstance(routes, list):
+                print(f"[INIT] Invalid format: routes file should contain a JSON array")
+                return
+            
+            loaded_count = 0
+            for route in routes:
+                # Validate required fields
+                required_fields = ["name", "endpoint", "target_url", "wallet_address", "token_address"]
+                if not all(field in route for field in required_fields):
+                    print(f"[INIT] Skipping route {route.get('name', 'unknown')}: missing required fields")
+                    continue
+                
+                endpoint = route["endpoint"]
+                if not endpoint.startswith("/"):
+                    endpoint = "/" + endpoint
+                
+                # Skip if endpoint already exists
+                if endpoint in self.apis:
+                    print(f"[INIT] Skipping route {endpoint}: already exists")
+                    continue
+                
+                # Create API config from pre-existing route
+                api_config = {
+                    "name": route["name"],
+                    "endpoint": endpoint,
+                    "target_url": route["target_url"],
+                    "method": route.get("method", "GET").upper(),
+                    "wallet_address": route["wallet_address"],
+                    "description": route.get("description", ""),
+                    "token_address": route["token_address"],
+                    "symbol": route.get("symbol", route["name"][:3].upper() + "API"),
+                    "token_uri": route.get("token_uri"),
+                    "tx_hash": route.get("tx_hash"),
+                    "flaunch_link": route.get("flaunch_link", f"https://flaunch.gg/token/{route['token_address']}"),
+                    "created_at": route.get("created_at", time.time()),
+                    "preexisting": True  # Mark as pre-existing
+                }
+                
+                # Fetch initial price data for the token
+                price_data = self.get_token_price_data(route["token_address"])
+                if price_data:
+                    api_config["price_data"] = price_data
+                    api_config["price_eth"] = price_data["price_eth"]
+                    print(f"[INIT] Loaded {route['name']} ({endpoint}) - Price: {price_data['price_eth']:.8f} ETH")
+                else:
+                    api_config["price_eth"] = route.get("price_eth", 0.0001)
+                    print(f"[INIT] Loaded {route['name']} ({endpoint}) - Price data unavailable, using default")
+                
+                self.apis[endpoint] = api_config
+                loaded_count += 1
+            
+            print(f"[INIT] Loaded {loaded_count} pre-existing API route(s)")
+            
+        except json.JSONDecodeError as e:
+            print(f"[INIT] Error parsing JSON file {routes_file}: {str(e)}")
+        except Exception as e:
+            print(f"[INIT] Error loading pre-existing routes from {routes_file}: {str(e)}")
 
     def launch_token_on_flaunch(self, api_config: dict) -> dict:
         """Launch a real token on Flaunch for this API"""
@@ -288,7 +365,22 @@ def create_api():
         "target_url": "https://api.example.com/weather",
         "method": "GET",
         "wallet_address": "0xYourAddress",
-        "description": "Get weather data"
+        "description": "Get weather data",
+        "input_format": {
+            "query_params": {
+                "city": {"type": "string", "required": true, "description": "City name"},
+                "units": {"type": "string", "required": false, "default": "celsius", "description": "Temperature units"}
+            },
+            "body": null
+        },
+        "output_format": {
+            "type": "object",
+            "properties": {
+                "temperature": {"type": "number", "description": "Temperature in specified units"},
+                "condition": {"type": "string", "description": "Weather condition"},
+                "humidity": {"type": "number", "description": "Humidity percentage"}
+            }
+        }
     }
     """
     data = request.json
@@ -317,6 +409,8 @@ def create_api():
         "method": data.get("method", "GET").upper(),
         "wallet_address": data["wallet_address"],
         "description": data.get("description", ""),
+        "input_format": data.get("input_format", {}),
+        "output_format": data.get("output_format", {}),
         "created_at": time.time()
     }
     
@@ -368,10 +462,13 @@ def create_api():
             "target_url": target_url,
             "method": api_config["method"],
             "wallet_address": data["wallet_address"],
+            "input_format": api_config.get("input_format", {}),
+            "output_format": api_config.get("output_format", {}),
             "launch_status": "deployed" if deployed else "pending",
             "job_id": api_config["job_id"],
             "token_address": api_config.get("token_address"), # Include address if found
-            "check_status": f"GET /admin/api-status{endpoint}"
+            "check_status": f"GET /admin/api-status{endpoint}",
+            "view_schema": f"GET /admin/api-schema{endpoint}"
         },
         "message": "Token launch initiated." if not deployed else "Token launched and API active."
     }), 201
@@ -398,7 +495,11 @@ def api_status(endpoint):
         "target_url": api_config["target_url"],
         "method": api_config["method"],
         "status": "deployed" if token_address else "launching",
-        "wallet_address": api_config["wallet_address"]
+        "wallet_address": api_config["wallet_address"],
+        "description": api_config.get("description", ""),
+        "input_format": api_config.get("input_format", {}),
+        "output_format": api_config.get("output_format", {}),
+        "schema_endpoint": f"/admin/api-schema{endpoint}"
     }
     
     if token_address:
@@ -417,6 +518,100 @@ def api_status(endpoint):
         }
     
     return jsonify(response)
+
+
+@app.route("/admin/api-schema/<path:endpoint>", methods=["GET"])
+def get_api_schema(endpoint):
+    """
+    Get the input and output format schema for an API endpoint
+    
+    Returns detailed schema information that can be used to:
+    - Understand what inputs the API expects
+    - Understand what outputs the API returns
+    - Generate API client code
+    - Validate requests before sending
+    """
+    endpoint = "/" + endpoint
+    
+    if endpoint not in store.apis:
+        return jsonify({"error": "API not found"}), 404
+    
+    api_config = store.apis[endpoint]
+    
+    schema = {
+        "endpoint": endpoint,
+        "name": api_config["name"],
+        "method": api_config["method"],
+        "description": api_config.get("description", ""),
+        "input_format": api_config.get("input_format", {}),
+        "output_format": api_config.get("output_format", {}),
+        "example_request": {},
+        "example_response": {}
+    }
+    
+    # Generate example request based on input_format
+    input_format = api_config.get("input_format", {})
+    if input_format:
+        example_request = {}
+        
+        # Handle query parameters
+        if "query_params" in input_format:
+            example_request["query_params"] = {}
+            for param, spec in input_format["query_params"].items():
+                if spec.get("required", False):
+                    example_type = spec.get("type", "string")
+                    if example_type == "string":
+                        example_request["query_params"][param] = f"example_{param}"
+                    elif example_type == "number":
+                        example_request["query_params"][param] = 0
+                    elif example_type == "boolean":
+                        example_request["query_params"][param] = True
+                    else:
+                        example_request["query_params"][param] = None
+                elif "default" in spec:
+                    example_request["query_params"][param] = spec["default"]
+        
+        # Handle request body
+        if "body" in input_format and input_format["body"]:
+            if isinstance(input_format["body"], dict):
+                example_request["body"] = input_format["body"]
+            else:
+                example_request["body"] = {}
+        
+        schema["example_request"] = example_request
+    
+    # Generate example response based on output_format
+    output_format = api_config.get("output_format", {})
+    if output_format:
+        if isinstance(output_format, dict) and "properties" in output_format:
+            example_response = {}
+            for prop, spec in output_format["properties"].items():
+                prop_type = spec.get("type", "string")
+                if prop_type == "string":
+                    example_response[prop] = f"example_{prop}"
+                elif prop_type == "number":
+                    example_response[prop] = 0
+                elif prop_type == "boolean":
+                    example_response[prop] = True
+                elif prop_type == "array":
+                    example_response[prop] = []
+                elif prop_type == "object":
+                    example_response[prop] = {}
+                else:
+                    example_response[prop] = None
+            schema["example_response"] = example_response
+        else:
+            schema["example_response"] = output_format
+    
+    # Add usage instructions
+    schema["usage"] = {
+        "curl_example": f"curl -X {api_config['method']} http://localhost:5000{endpoint}",
+        "with_payment": "Include X-PAYMENT header for authenticated requests",
+        "view_full_info": f"/admin/api-info{endpoint}",
+        "view_status": f"/admin/api-status{endpoint}"
+    }
+    
+    return jsonify(schema)
 
 
 @app.route("/admin/token-price/<path:endpoint>", methods=["GET"])
@@ -466,7 +661,11 @@ def list_apis():
             "target_url": api_config["target_url"],
             "method": api_config["method"],
             "status": "deployed" if token_address else "launching",
-            "wallet_address": api_config["wallet_address"]
+            "wallet_address": api_config["wallet_address"],
+            "description": api_config.get("description", ""),
+            "has_input_format": bool(api_config.get("input_format")),
+            "has_output_format": bool(api_config.get("output_format")),
+            "schema_endpoint": f"/admin/api-schema{endpoint}"
         }
         
         if token_address:
@@ -496,6 +695,7 @@ def health():
             "create_api": "POST /admin/create-api",
             "list_apis": "GET /admin/list-apis",
             "api_status": "GET /admin/api-status/<endpoint>",
+            "api_schema": "GET /admin/api-schema/<endpoint>  # View input/output formats",
             "token_price": "GET /admin/token-price/<endpoint>",
             "api_info": "GET /admin/api-info/<endpoint>  # Full price history + token info"
         },
@@ -558,6 +758,10 @@ def get_api_info(endpoint):
             "endpoint": endpoint,
             "target_url": api_config["target_url"],
             "method": api_config["method"],
+            "description": api_config.get("description", ""),
+            "input_format": api_config.get("input_format", {}),
+            "output_format": api_config.get("output_format", {}),
+            "schema_endpoint": f"/admin/api-schema{endpoint}",
             "current_price": {
                 "price_eth": float(full_data.get("price", {}).get("priceETH", 0)),
                 "market_cap_eth": float(full_data.get("price", {}).get("marketCapETH", 0)),

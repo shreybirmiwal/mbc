@@ -302,7 +302,22 @@ def create_api():
         "target_url": "https://api.example.com/weather",
         "method": "GET",
         "wallet_address": "0xYourAddress",
-        "description": "Get weather data"
+        "description": "Get weather data",
+        "input_format": {
+            "query_params": {
+                "city": {"type": "string", "required": true, "description": "City name"},
+                "units": {"type": "string", "required": false, "default": "celsius", "description": "Temperature units"}
+            },
+            "body": null
+        },
+        "output_format": {
+            "type": "object",
+            "properties": {
+                "temperature": {"type": "number", "description": "Temperature in specified units"},
+                "condition": {"type": "string", "description": "Weather condition"},
+                "humidity": {"type": "number", "description": "Humidity percentage"}
+            }
+        }
     }
     """
     data = request.json
@@ -330,6 +345,8 @@ def create_api():
         "method": data.get("method", "GET").upper(),
         "wallet_address": data["wallet_address"],
         "description": data.get("description", ""),
+        "input_format": data.get("input_format", {}),
+        "output_format": data.get("output_format", {}),
         "created_at": time.time()
     }
     
@@ -374,10 +391,13 @@ def create_api():
             "target_url": target_url,
             "method": api_config["method"],
             "wallet_address": data["wallet_address"],
+            "input_format": api_config.get("input_format", {}),
+            "output_format": api_config.get("output_format", {}),
             "launch_status": "deployed" if deployed else "pending",
             "job_id": api_config["job_id"],
             "token_address": api_config.get("token_address"),
             "check_status": f"GET /admin/api-status{endpoint}",
+            "view_schema": f"GET /admin/api-schema{endpoint}",
             "x402_enabled": deployed
         },
         "message": "Token launched and x402 payment enabled!" if deployed else "Token launch initiated."
@@ -404,6 +424,10 @@ def api_status(endpoint):
         "method": api_config["method"],
         "status": "deployed" if token_address else "launching",
         "wallet_address": api_config["wallet_address"],
+        "description": api_config.get("description", ""),
+        "input_format": api_config.get("input_format", {}),
+        "output_format": api_config.get("output_format", {}),
+        "schema_endpoint": f"/admin/api-schema{endpoint}",
         "x402_enabled": bool(token_address)
     }
     
@@ -431,6 +455,100 @@ def api_status(endpoint):
     return jsonify(response)
 
 
+@app.route("/admin/api-schema/<path:endpoint>", methods=["GET"])
+def get_api_schema(endpoint):
+    """
+    Get the input and output format schema for an API endpoint
+    
+    Returns detailed schema information that can be used to:
+    - Understand what inputs the API expects
+    - Understand what outputs the API returns
+    - Generate API client code
+    - Validate requests before sending
+    """
+    endpoint = "/" + endpoint
+    
+    if endpoint not in store.apis:
+        return jsonify({"error": "API not found"}), 404
+    
+    api_config = store.apis[endpoint]
+    
+    schema = {
+        "endpoint": endpoint,
+        "name": api_config["name"],
+        "method": api_config["method"],
+        "description": api_config.get("description", ""),
+        "input_format": api_config.get("input_format", {}),
+        "output_format": api_config.get("output_format", {}),
+        "example_request": {},
+        "example_response": {}
+    }
+    
+    # Generate example request based on input_format
+    input_format = api_config.get("input_format", {})
+    if input_format:
+        example_request = {}
+        
+        # Handle query parameters
+        if "query_params" in input_format:
+            example_request["query_params"] = {}
+            for param, spec in input_format["query_params"].items():
+                if spec.get("required", False):
+                    example_type = spec.get("type", "string")
+                    if example_type == "string":
+                        example_request["query_params"][param] = f"example_{param}"
+                    elif example_type == "number":
+                        example_request["query_params"][param] = 0
+                    elif example_type == "boolean":
+                        example_request["query_params"][param] = True
+                    else:
+                        example_request["query_params"][param] = None
+                elif "default" in spec:
+                    example_request["query_params"][param] = spec["default"]
+        
+        # Handle request body
+        if "body" in input_format and input_format["body"]:
+            if isinstance(input_format["body"], dict):
+                example_request["body"] = input_format["body"]
+            else:
+                example_request["body"] = {}
+        
+        schema["example_request"] = example_request
+    
+    # Generate example response based on output_format
+    output_format = api_config.get("output_format", {})
+    if output_format:
+        if isinstance(output_format, dict) and "properties" in output_format:
+            example_response = {}
+            for prop, spec in output_format["properties"].items():
+                prop_type = spec.get("type", "string")
+                if prop_type == "string":
+                    example_response[prop] = f"example_{prop}"
+                elif prop_type == "number":
+                    example_response[prop] = 0
+                elif prop_type == "boolean":
+                    example_response[prop] = True
+                elif prop_type == "array":
+                    example_response[prop] = []
+                elif prop_type == "object":
+                    example_response[prop] = {}
+                else:
+                    example_response[prop] = None
+            schema["example_response"] = example_response
+        else:
+            schema["example_response"] = output_format
+    
+    # Add usage instructions
+    schema["usage"] = {
+        "curl_example": f"curl -X {api_config['method']} http://localhost:5000{endpoint}",
+        "with_payment": "Include X-PAYMENT header for authenticated requests",
+        "view_full_info": f"/admin/api-info{endpoint}",
+        "view_status": f"/admin/api-status{endpoint}"
+    }
+    
+    return jsonify(schema)
+
+
 @app.route("/admin/list-apis", methods=["GET"])
 def list_apis():
     """List all APIs and their token status"""
@@ -444,6 +562,10 @@ def list_apis():
             "method": api_config["method"],
             "status": "deployed" if token_address else "launching",
             "wallet_address": api_config["wallet_address"],
+            "description": api_config.get("description", ""),
+            "has_input_format": bool(api_config.get("input_format")),
+            "has_output_format": bool(api_config.get("output_format")),
+            "schema_endpoint": f"/admin/api-schema{endpoint}",
             "x402_enabled": bool(token_address)
         }
         
@@ -478,6 +600,7 @@ def health():
             "create_api": "POST /admin/create-api",
             "list_apis": "GET /admin/list-apis",
             "api_status": "GET /admin/api-status/<endpoint>",
+            "api_schema": "GET /admin/api-schema/<endpoint>  # View input/output formats",
             "api_info": "GET /admin/api-info/<endpoint>"
         },
         "active_apis": len(store.apis),
@@ -547,6 +670,10 @@ def get_api_info(endpoint):
             "endpoint": endpoint,
             "target_url": api_config["target_url"],
             "method": api_config["method"],
+            "description": api_config.get("description", ""),
+            "input_format": api_config.get("input_format", {}),
+            "output_format": api_config.get("output_format", {}),
+            "schema_endpoint": f"/admin/api-schema{endpoint}",
             "payment_protocol": "x402",
             "x402_enabled": True,
             "current_price": {
