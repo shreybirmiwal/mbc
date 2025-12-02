@@ -45,3 +45,69 @@ another button to
 
 
 you can chain together any apis on our site
+
+
+
+
+
+
+
+# 1.
+how would you create a python server that
+when a specific route is called, ie, 'activate-new-route'
+
+the server it self:
+ -- adds a new route to it self
+
+I am trying to make a minimvially viable working demo for this, then extend it, so keep it DEAD SIMPLE and working.
+
+the next future steps (dont do yet, but keep in mind)
+
+-- this new route is a x402 activated route
+here is documentation on x402:
+import os
+from typing import Any, Dict
+
+from dotenv import load_dotenv
+from fastapi import FastAPI
+from x402.fastapi.middleware import require_payment
+from x402.types import EIP712Domain, TokenAmount, TokenAsset
+
+# Load environment variables
+load_dotenv()
+
+app = FastAPI()
+
+# Apply payment middleware to specific routes
+app.middleware("http")(
+    require_payment(
+        path="/weather",
+        price="$0.001",
+        pay_to_address="0xAddress",
+        network="base-sepolia",
+    )
+)
+
+@app.get("/weather")
+async def get_weather() -> Dict[str, Any]:
+    return {
+        "report": {
+            "weather": "sunny",
+            "temperature": 70,
+        }
+    }
+
+interface PaymentMiddlewareConfig {
+  description?: string;               // Description of the payment
+  mimeType?: string;                  // MIME type of the resource
+  maxTimeoutSeconds?: number;         // Maximum time for payment (default: 60)
+  outputSchema?: Record; // JSON schema for the response
+  customPaywallHtml?: string;         // Custom HTML for the paywall
+  resource?: string;                  // Resource URL (defaults to request URL)
+}
+
+
+ -- have dynamic pricing that changes based on price of ETH (later it will change to a BASE l2 token)
+
+
+https://claude.ai/share/035cfe7d-2be6-4d44-8395-5bf22e17f0e4
