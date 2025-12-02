@@ -15,7 +15,8 @@ app = Flask(__name__)
 # Flaunch API Configuration
 FLAUNCH_BASE_URL = "https://web2-api.flaunch.gg/api/v1"
 FLAUNCH_DATA_API = "https://dev-api.flayerlabs.xyz/v1"
-NETWORK = "base-sepolia"  # Change to "base" for mainnet
+#NETWORK = "base-sepolia"  # Change to "base" for mainnet
+NETWORK = "base"
 
 class FlaunchTokenStore:
     def __init__(self):
