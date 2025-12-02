@@ -1,6 +1,15 @@
 """
 x402 + Flaunch API Integration
-Wrap existing APIs with real token-based payments
+Dynamically-priced APIs tied to real token prices on Flaunch DEX
+
+How it works:
+1. Wrap any existing API endpoint with token-based pricing
+2. Launch a real ERC-20 token on Flaunch for each API
+3. API access cost = current token price from Flaunch (synced in real-time)
+4. Users pay in USDC via x402 protocol, amount determined by token price
+5. Token holders can trade on Flaunch while API pricing tracks market value
+
+This creates dynamic, market-driven API pricing backed by tradeable tokens.
 """
 
 from flask import Flask, request, jsonify
@@ -9,20 +18,22 @@ import time
 import requests
 from typing import Dict, Optional
 import json
+from x402.flask.middleware import PaymentMiddleware
 
 app = Flask(__name__)
 
 # Flaunch API Configuration
 FLAUNCH_BASE_URL = "https://web2-api.flaunch.gg/api/v1"
 FLAUNCH_DATA_API = "https://dev-api.flayerlabs.xyz/v1"
-#NETWORK = "base-sepolia"  # Change to "base" for mainnet
-NETWORK = "base"
+NETWORK = "base"  # Change to "base-sepolia" for testnet
+FACILITATOR_URL = "https://x402.org/facilitator"  # For testnet
 
 class FlaunchTokenStore:
     def __init__(self):
         self.apis: Dict[str, dict] = {}
         self.launch_jobs: Dict[str, str] = {}
         self.price_sync_thread = None
+        self.payment_middleware = PaymentMiddleware(app)
 
     def launch_token_on_flaunch(self, api_config: dict) -> dict:
         """Launch a real token on Flaunch for this API"""
@@ -44,7 +55,6 @@ class FlaunchTokenStore:
         }
         
         print(f"[FLAUNCH] Launching token for {api_name}...")
-        print(f"[DEBUG] Payload: {json.dumps(launch_data)}") # DEBUG PRINT
         
         try:
             response = requests.post(
@@ -63,12 +73,8 @@ class FlaunchTokenStore:
                     print(f"[FLAUNCH] ✗ Launch failed: {result.get('error')}")
                     return None
             else:
-                # RE-ADDED ERROR PRINTING SO WE CAN SEE THE ISSUE
                 print(f"[FLAUNCH] ✗ API error: {response.status_code}")
-                try:
-                    print(f"[DEBUG] Server Response: {response.text}")
-                except:
-                    pass
+                print(f"[DEBUG] Server Response: {response.text}")
                 return None
                 
         except Exception as e:
@@ -83,10 +89,6 @@ class FlaunchTokenStore:
                 headers={"Content-Type": "application/json"},
                 timeout=10
             )
-
-            print("GETTING RESPONSE for job_id: " + job_id)
-            print(response.json())
-            
             return response.json()
             
         except Exception as e:
@@ -118,7 +120,7 @@ class FlaunchTokenStore:
             return None
     
     def sync_prices(self):
-        """Background thread to sync real token prices"""
+        """Background thread to sync real token prices and update x402 middleware"""
         while True:
             time.sleep(30)  # Check every 30 seconds
             
@@ -134,39 +136,57 @@ class FlaunchTokenStore:
                         api_config["price_data"] = price_data
                         api_config["price_eth"] = new_price
                         
+                        # Update x402 middleware with new price
+                        self.update_x402_route(endpoint, api_config)
+                        
                         if old_price > 0:
                             change = ((new_price - old_price) / old_price * 100)
                             print(f"[PRICE] {api_config['symbol']}: {new_price:.8f} ETH ({change:+.2f}%)")
     
-    def finalize_token_launch(self, endpoint: str):
-        print(f"[DEBUGSHREY] FINALIZING TOKEN LAUNCH for {endpoint}")
+    def update_x402_route(self, endpoint: str, api_config: dict):
+        """Update or add x402 payment middleware for this route"""
+        token_address = api_config.get("token_address")
+        if not token_address:
+            return
         
+        price_eth = api_config.get("price_eth", 0.0001)
+        
+        # Convert ETH price to USD (approximate: 1 ETH = $3000)
+        # In production, you'd fetch real ETH/USD rate
+        eth_to_usd = 3000
+        price_usd = price_eth * eth_to_usd
+        price_str = f"${price_usd:.6f}"
+        
+        # Add/update payment middleware for this route
+        # Note: x402 accepts USDC payment, but amount is based on Flaunch token price
+        self.payment_middleware.add(
+            path=endpoint,
+            price=price_str,
+            pay_to_address=api_config["wallet_address"],
+            network="base-sepolia" if NETWORK == "base-sepolia" else "base"
+        )
+        
+        print(f"[x402] Updated payment route: {endpoint} -> {price_str} (based on {price_eth:.8f} ETH worth of {api_config['symbol']})")
+    
+    def finalize_token_launch(self, endpoint: str):
         if endpoint not in self.apis:
-            print("[DEBUGSHREY] Endpoint not found in store")
             return False
             
         api_config = self.apis[endpoint]
         job_id = api_config.get("job_id")
         
-        # If we already have the address, we are done
         if api_config.get("token_address"):
-            print("[DEBUGSHREY] Token address already known")
             return True
         
         if not job_id:
-            print("[DEBUGSHREY] No Job ID found")
             return False
         
         status = self.check_launch_status(job_id)
-        # print(f"[DEBUGSHREY] STATUS: {status}")
         
-        # === CRITICAL FIX: Don't check for state == "completed" ===
         if status and status.get("success"):
-            # FIX: Handle case where collectionToken is None (explicit null from API)
             token_info = status.get("collectionToken") or {} 
             token_address = token_info.get("address")
             
-            # If Flaunch gave us an address, IT IS LAUNCHED.
             if token_address:
                 api_config["token_address"] = token_address
                 api_config["symbol"] = token_info.get("symbol")
@@ -179,7 +199,11 @@ class FlaunchTokenStore:
                     api_config["price_data"] = price_data
                     api_config["price_eth"] = price_data["price_eth"]
                 
+                # Register with x402
+                self.update_x402_route(endpoint, api_config)
+                
                 print(f"[FLAUNCH] ✓ Token deployed at {token_address}")
+                print(f"[x402] ✓ Payment route registered")
                 return True
             
         return False
@@ -190,7 +214,6 @@ store = FlaunchTokenStore()
 def proxy_to_target_api(target_url: str, method: str = "GET"):
     """Proxy request to the wrapped API endpoint"""
     try:
-        # Forward query params and body
         params = request.args.to_dict()
         data = request.get_json(silent=True)
         headers = {k: v for k, v in request.headers if k.lower() not in ['host', 'x-payment']}
@@ -202,7 +225,6 @@ def proxy_to_target_api(target_url: str, method: str = "GET"):
         else:
             return jsonify({"error": "Unsupported method"}), 400
         
-        # Return the response from target API
         try:
             return jsonify(response.json()), response.status_code
         except:
@@ -214,61 +236,29 @@ def proxy_to_target_api(target_url: str, method: str = "GET"):
         return jsonify({"error": f"Target API error: {str(e)}"}), 502
 
 
-def require_payment(endpoint: str):
-    """Check payment based on REAL token price from Flaunch"""
-    if endpoint not in store.apis:
-        return jsonify({"error": "API not found"}), 404
-    
-    api_config = store.apis[endpoint]
-    
-    # Check if token is deployed
-    if not api_config.get("token_address"):
-        return jsonify({
-            "error": "Token still launching",
-            "status": "Token deployment in progress. Please try again in a moment.",
-            "job_id": api_config.get("job_id")
-        }), 503
-    
-    price_eth = api_config.get("price_eth", 0.0001)
-    payment_header = request.headers.get("X-PAYMENT")
-    
-    if not payment_header:
-        return jsonify({
-            "error": "Payment Required",
-            "payment_details": {
-                "endpoint": endpoint,
-                "price_eth": f"{price_eth:.8f}",
-                "price_data": api_config.get("price_data", {}),
-                "token_address": api_config["token_address"],
-                "token_symbol": api_config["symbol"],
-                "pay_to_address": api_config["wallet_address"],
-                "network": NETWORK,
-                "chain_id": 84532 if NETWORK == "base-sepolia" else 8453,
-                "view_token": f"https://flaunch.gg/token/{api_config['token_address']}",
-                "description": f"Pay {price_eth:.8f} ETH worth of {api_config['symbol']} to access this API"
-            }
-        }), 402
-    
-    print(f"[PAYMENT] Received for {endpoint}: {price_eth:.8f} ETH")
-    return None
-
-
 @app.route("/<path:endpoint>", methods=["GET", "POST"])
 def dynamic_api(endpoint):
-    """Handle all dynamic API endpoints"""
+    """
+    Handle all dynamic API endpoints
+    Payment is now handled by x402 middleware automatically
+    """
     endpoint = "/" + endpoint
     
     # Try to finalize token if still pending
     if endpoint in store.apis:
-        time.sleep(5)
-        store.finalize_token_launch(endpoint)
+        if not store.apis[endpoint].get("token_address"):
+            time.sleep(5)
+            if not store.finalize_token_launch(endpoint):
+                return jsonify({
+                    "error": "Token still launching",
+                    "status": "Token deployment in progress. Please try again in a moment.",
+                    "job_id": store.apis[endpoint].get("job_id")
+                }), 503
+    else:
+        return jsonify({"error": "API endpoint not found"}), 404
     
-    # Check payment
-    payment_check = require_payment(endpoint)
-    if payment_check:
-        return payment_check
-    
-    # Payment verified, proxy to target API
+    # If we reach here, x402 middleware has already verified payment
+    # Proxy to target API
     api_config = store.apis[endpoint]
     target_url = api_config["target_url"]
     method = api_config.get("method", "GET")
@@ -279,7 +269,7 @@ def dynamic_api(endpoint):
 @app.route("/admin/create-api", methods=["POST"])
 def create_api():
     """
-    Wrap an existing API with token-based payment
+    Wrap an existing API with x402 token-based payment
     
     Request body:
     {
@@ -304,7 +294,6 @@ def create_api():
     if endpoint in store.apis:
         return jsonify({"error": "Endpoint already exists"}), 400
     
-    # Validate target URL
     target_url = data["target_url"]
     if not target_url.startswith(("http://", "https://")):
         return jsonify({"error": "Invalid target URL"}), 400
@@ -322,15 +311,12 @@ def create_api():
     
     # Launch real token on Flaunch
     launch_result = store.launch_token_on_flaunch(api_config)
-    
-    print(launch_result)
 
     if not launch_result:
         return jsonify({
             "error": "Failed to launch token on Flaunch"
         }), 500
     
-    # Store job ID for tracking
     api_config["job_id"] = launch_result["jobId"]
     api_config["queue_position"] = launch_result.get("queueStatus", {}).get("position", 0)
     
@@ -339,26 +325,22 @@ def create_api():
     print(f"[API CREATED] {endpoint} -> {target_url}")
     print(f"[API CREATED] Token launching (Job: {api_config['job_id']})")
     
-# === POLLING LOGIC START ===
+    # Poll for deployment
     print("[FLAUNCH] Polling for deployment completion...")
     
-    timeout = 60  # Maximum wait time in seconds
+    timeout = 60
     start_time = time.time()
     deployed = False
 
     while time.time() - start_time < timeout:
-        # Check if finalized (returns True if token_address is set)
         if store.finalize_token_launch(endpoint):
             deployed = True
             print(f"[FLAUNCH] ✓ Deployment confirmed in {int(time.time() - start_time)}s")
             break
-        
-        # Wait 2 seconds before checking again
         time.sleep(2)
         
     if not deployed:
         print("[FLAUNCH] ⚠ Deployment pending or taking longer than expected.")
-    # === POLLING LOGIC END ===
 
     return jsonify({
         "success": True,
@@ -370,10 +352,11 @@ def create_api():
             "wallet_address": data["wallet_address"],
             "launch_status": "deployed" if deployed else "pending",
             "job_id": api_config["job_id"],
-            "token_address": api_config.get("token_address"), # Include address if found
-            "check_status": f"GET /admin/api-status{endpoint}"
+            "token_address": api_config.get("token_address"),
+            "check_status": f"GET /admin/api-status{endpoint}",
+            "x402_enabled": deployed
         },
-        "message": "Token launch initiated." if not deployed else "Token launched and API active."
+        "message": "Token launched and x402 payment enabled!" if deployed else "Token launch initiated."
     }), 201
 
 
@@ -386,8 +369,6 @@ def api_status(endpoint):
         return jsonify({"error": "API not found"}), 404
     
     api_config = store.apis[endpoint]
-    
-    # Try to update token status
     store.finalize_token_launch(endpoint)
     
     token_address = api_config.get("token_address")
@@ -398,7 +379,8 @@ def api_status(endpoint):
         "target_url": api_config["target_url"],
         "method": api_config["method"],
         "status": "deployed" if token_address else "launching",
-        "wallet_address": api_config["wallet_address"]
+        "wallet_address": api_config["wallet_address"],
+        "x402_enabled": bool(token_address)
     }
     
     if token_address:
@@ -410,6 +392,12 @@ def api_status(endpoint):
             "view_on_flaunch": f"https://flaunch.gg/token/{token_address}",
             "tx_hash": api_config.get("tx_hash")
         }
+        response["payment_info"] = {
+            "protocol": "x402",
+            "accepts": api_config.get("symbol"),
+            "chain": "base" if NETWORK == "base" else "base-sepolia",
+            "price_updates": "Real-time from Flaunch DEX"
+        }
     else:
         response["token"] = {
             "status": "pending",
@@ -417,41 +405,6 @@ def api_status(endpoint):
         }
     
     return jsonify(response)
-
-
-@app.route("/admin/token-price/<path:endpoint>", methods=["GET"])
-def get_token_price(endpoint):
-    """Get detailed price information for an API's token"""
-    endpoint = "/" + endpoint
-    
-    if endpoint not in store.apis:
-        return jsonify({"error": "API not found"}), 404
-    
-    api_config = store.apis[endpoint]
-    token_address = api_config.get("token_address")
-    
-    if not token_address:
-        return jsonify({
-            "error": "Token not yet deployed",
-            "status": "launching"
-        }), 503
-    
-    # Fetch fresh price data
-    price_data = store.get_token_price_data(token_address)
-    
-    if not price_data:
-        return jsonify({
-            "error": "Unable to fetch price data"
-        }), 500
-    
-    return jsonify({
-        "endpoint": endpoint,
-        "token_address": token_address,
-        "symbol": api_config["symbol"],
-        "price_data": price_data,
-        "api_cost_eth": price_data["price_eth"],
-        "flaunch_link": f"https://flaunch.gg/token/{token_address}"
-    })
 
 
 @app.route("/admin/list-apis", methods=["GET"])
@@ -466,7 +419,8 @@ def list_apis():
             "target_url": api_config["target_url"],
             "method": api_config["method"],
             "status": "deployed" if token_address else "launching",
-            "wallet_address": api_config["wallet_address"]
+            "wallet_address": api_config["wallet_address"],
+            "x402_enabled": bool(token_address)
         }
         
         if token_address:
@@ -481,7 +435,9 @@ def list_apis():
     
     return jsonify({
         "total_apis": len(apis_info),
-        "apis": apis_info
+        "apis": apis_info,
+        "protocol": "x402",
+        "network": NETWORK
     })
 
 
@@ -490,35 +446,30 @@ def health():
     return jsonify({
         "status": "running",
         "message": "x402 + Flaunch: Wrap any API with token payments",
+        "protocol": "x402",
         "network": NETWORK,
         "chain_id": 84532 if NETWORK == "base-sepolia" else 8453,
+        "facilitator": FACILITATOR_URL,
         "endpoints": {
             "create_api": "POST /admin/create-api",
             "list_apis": "GET /admin/list-apis",
             "api_status": "GET /admin/api-status/<endpoint>",
-            "token_price": "GET /admin/token-price/<endpoint>",
-            "api_info": "GET /admin/api-info/<endpoint>  # Full price history + token info"
+            "api_info": "GET /admin/api-info/<endpoint>"
         },
         "active_apis": len(store.apis),
         "how_it_works": {
             "1": "POST to /admin/create-api with your existing API endpoint",
             "2": "Server launches a real token on Flaunch for that API",
-            "3": "Token price from Flaunch = API access cost",
-            "4": "Users pay with tokens to access your wrapped API"
+            "3": "x402 protocol enforces payments using the token",
+            "4": "Token price from Flaunch = API access cost (updates in real-time)",
+            "5": "Users pay with tokens via x402 standard to access your API"
         }
     })
 
+
 @app.route("/admin/api-info/<path:endpoint>", methods=["GET"])
 def get_api_info(endpoint):
-    """
-    Get comprehensive API information including price history, token address, and name
-    
-    Returns:
-    - API name
-    - Token contract address
-    - Full price history (daily, hourly, minutely, secondly)
-    - Current price data
-    """
+    """Get comprehensive API information including price history"""
     endpoint = "/" + endpoint
     
     if endpoint not in store.apis:
@@ -535,7 +486,6 @@ def get_api_info(endpoint):
             "api_name": api_config["name"]
         }), 503
     
-    # Fetch full price data with history from Flaunch Data API
     try:
         response = requests.get(
             f"{FLAUNCH_DATA_API}/{NETWORK}/tokens/{token_address}/price",
@@ -558,6 +508,8 @@ def get_api_info(endpoint):
             "endpoint": endpoint,
             "target_url": api_config["target_url"],
             "method": api_config["method"],
+            "payment_protocol": "x402",
+            "x402_enabled": True,
             "current_price": {
                 "price_eth": float(full_data.get("price", {}).get("priceETH", 0)),
                 "market_cap_eth": float(full_data.get("price", {}).get("marketCapETH", 0)),
@@ -576,24 +528,12 @@ def get_api_info(endpoint):
                 "minutely": full_data.get("priceHistory", {}).get("minutely", []),
                 "secondly": full_data.get("priceHistory", {}).get("secondly", [])
             },
-            "trading": {
-                "bid_wall_balance": float(full_data.get("trading", {}).get("bidWallBalance", 0)),
-                "bid_wall_remaining": float(full_data.get("trading", {}).get("bidWallRemaining", 0)),
-                "buyback_progress": float(full_data.get("trading", {}).get("buybackProgress", 0))
-            },
             "links": {
                 "flaunch": f"https://flaunch.gg/base/coin/{token_address}",
                 "api_status": f"/admin/api-status{endpoint}"
-            },
-            "meta": full_data.get("meta", {})
+            }
         })
         
-    except requests.exceptions.Timeout:
-        return jsonify({
-            "error": "Request timeout fetching price history",
-            "api_name": api_config["name"],
-            "token_address": token_address
-        }), 504
     except Exception as e:
         return jsonify({
             "error": f"Error fetching price history: {str(e)}",
@@ -601,12 +541,6 @@ def get_api_info(endpoint):
             "token_address": token_address
         }), 500
 
-
-@app.route("/admin/checkjobid", methods=["GET"])
-def check_jobid():
-    job_id = request.json.get("job_id")
-    print("CHECKING JOB ID: " + job_id)
-    return jsonify(store.check_launch_status(job_id))
 
 if __name__ == "__main__":
     # Start price sync thread
@@ -616,10 +550,12 @@ if __name__ == "__main__":
     print(f"\n{'='*60}")
     print(f"x402 + Flaunch API Server")
     print(f"{'='*60}")
+    print(f"Protocol: x402")
     print(f"Network: {NETWORK}")
     print(f"Chain ID: {84532 if NETWORK == 'base-sepolia' else 8453}")
-    print(f"\nWrap any existing API with token-based payments!")
-    print(f"Real tokens launched on Flaunch, real prices from DEX")
+    print(f"Facilitator: {FACILITATOR_URL}")
+    print(f"\nWrap any existing API with x402 token-based payments!")
+    print(f"Real tokens launched on Flaunch, prices synced to x402")
     print(f"{'='*60}\n")
     
     app.run(debug=True, port=5000, use_reloader=True)
