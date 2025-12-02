@@ -568,7 +568,7 @@ def get_api_info(endpoint):
                 "buyback_progress": float(full_data.get("trading", {}).get("buybackProgress", 0))
             },
             "links": {
-                "flaunch": f"https://flaunch.gg/token/{token_address}",
+                "flaunch": f"https://flaunch.gg/base/coin/{token_address}",
                 "api_status": f"/admin/api-status{endpoint}"
             },
             "meta": full_data.get("meta", {})
