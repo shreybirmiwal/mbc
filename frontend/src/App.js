@@ -245,7 +245,10 @@ function PriceChart({ priceHistory }) {
   const padding = 40;
 
   const points = chartData.map((d, i) => {
-    const x = padding + (i / (chartData.length - 1)) * (width - 2 * padding);
+    // Handle single point case to avoid division by zero
+    const x = chartData.length === 1
+      ? padding + (width - 2 * padding) / 2  // Center the single point
+      : padding + (i / (chartData.length - 1)) * (width - 2 * padding);
     const y = padding + (height - 2 * padding) - ((d.price - minPrice) / range) * (height - 2 * padding);
     return `${x},${y}`;
   }).join(' ');
