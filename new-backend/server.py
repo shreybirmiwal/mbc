@@ -139,36 +139,47 @@ class FlaunchTokenStore:
                             print(f"[PRICE] {api_config['symbol']}: {new_price:.8f} ETH ({change:+.2f}%)")
     
     def finalize_token_launch(self, endpoint: str):
-        """Check and finalize token launch"""
+        print(f"[DEBUGSHREY] FINALIZING TOKEN LAUNCH for {endpoint}")
+        
         if endpoint not in self.apis:
+            print("[DEBUGSHREY] Endpoint not found in store")
             return False
             
         api_config = self.apis[endpoint]
         job_id = api_config.get("job_id")
         
-        if not job_id or api_config.get("token_address"):
+        # If we already have the address, we are done
+        if api_config.get("token_address"):
+            print("[DEBUGSHREY] Token address already known")
             return True
         
-        status = self.check_launch_status(job_id)
+        if not job_id:
+            print("[DEBUGSHREY] No Job ID found")
+            return False
         
-        if status and status.get("success") and status.get("state") == "completed":
+        status = self.check_launch_status(job_id)
+        # print(f"[DEBUGSHREY] STATUS: {status}")
+        
+        # === CRITICAL FIX: Don't check for state == "completed" ===
+        if status and status.get("success"):
             token_info = status.get("collectionToken", {})
             token_address = token_info.get("address")
             
-            api_config["token_address"] = token_address
-            api_config["symbol"] = token_info.get("symbol")
-            api_config["token_uri"] = token_info.get("tokenURI")
-            api_config["tx_hash"] = status.get("transactionHash")
-            
-            # Fetch initial price
-            price_data = self.get_token_price_data(token_address)
-            if price_data:
-                api_config["price_data"] = price_data
-                api_config["price_eth"] = price_data["price_eth"]
-            
-            print(f"[FLAUNCH] ✓ Token deployed at {token_address}")
-            print(f"[FLAUNCH] ✓ Initial price: {price_data['price_eth']:.8f} ETH")
-            return True
+            # If Flaunch gave us an address, IT IS LAUNCHED.
+            if token_address:
+                api_config["token_address"] = token_address
+                api_config["symbol"] = token_info.get("symbol")
+                api_config["token_uri"] = token_info.get("tokenURI")
+                api_config["tx_hash"] = status.get("transactionHash")
+                
+                # Fetch initial price
+                price_data = self.get_token_price_data(token_address)
+                if price_data:
+                    api_config["price_data"] = price_data
+                    api_config["price_eth"] = price_data["price_eth"]
+                
+                print(f"[FLAUNCH] ✓ Token deployed at {token_address}")
+                return True
             
         return False
 
@@ -249,6 +260,7 @@ def dynamic_api(endpoint):
     
     # Try to finalize token if still pending
     if endpoint in store.apis:
+        time.sleep(5)
         store.finalize_token_launch(endpoint)
     
     # Check payment
@@ -327,6 +339,13 @@ def create_api():
     print(f"[API CREATED] {endpoint} -> {target_url}")
     print(f"[API CREATED] Token launching (Job: {api_config['job_id']})")
     
+    # === THIS WAS MISSING ===
+    # Wait 4 seconds for blockchain to catch up, then CALL FINALIZE
+    print("[FLAUNCH] Waiting 4s for deployment...")
+    time.sleep(4)
+    store.finalize_token_launch(endpoint)
+    # ========================
+
     return jsonify({
         "success": True,
         "api": {
@@ -463,7 +482,8 @@ def health():
             "create_api": "POST /admin/create-api",
             "list_apis": "GET /admin/list-apis",
             "api_status": "GET /admin/api-status/<endpoint>",
-            "token_price": "GET /admin/token-price/<endpoint>"
+            "token_price": "GET /admin/token-price/<endpoint>",
+            "api_info": "GET /admin/api-info/<endpoint>  # Full price history + token info"
         },
         "active_apis": len(store.apis),
         "how_it_works": {
@@ -473,6 +493,99 @@ def health():
             "4": "Users pay with tokens to access your wrapped API"
         }
     })
+
+@app.route("/admin/api-info/<path:endpoint>", methods=["GET"])
+def get_api_info(endpoint):
+    """
+    Get comprehensive API information including price history, token address, and name
+    
+    Returns:
+    - API name
+    - Token contract address
+    - Full price history (daily, hourly, minutely, secondly)
+    - Current price data
+    """
+    endpoint = "/" + endpoint
+    
+    if endpoint not in store.apis:
+        return jsonify({"error": "API not found"}), 404
+    
+    api_config = store.apis[endpoint]
+    token_address = api_config.get("token_address")
+    
+    if not token_address:
+        return jsonify({
+            "error": "Token not yet deployed",
+            "status": "launching",
+            "job_id": api_config.get("job_id"),
+            "api_name": api_config["name"]
+        }), 503
+    
+    # Fetch full price data with history from Flaunch Data API
+    try:
+        response = requests.get(
+            f"{FLAUNCH_DATA_API}/{NETWORK}/tokens/{token_address}/price",
+            timeout=10
+        )
+        
+        if response.status_code != 200:
+            return jsonify({
+                "error": "Unable to fetch price history",
+                "api_name": api_config["name"],
+                "token_address": token_address
+            }), 500
+        
+        full_data = response.json()
+        
+        return jsonify({
+            "api_name": api_config["name"],
+            "token_address": token_address,
+            "symbol": api_config.get("symbol"),
+            "endpoint": endpoint,
+            "target_url": api_config["target_url"],
+            "method": api_config["method"],
+            "current_price": {
+                "price_eth": float(full_data.get("price", {}).get("priceETH", 0)),
+                "market_cap_eth": float(full_data.get("price", {}).get("marketCapETH", 0)),
+                "price_change_24h": float(full_data.get("price", {}).get("priceChange24h", 0)),
+                "price_change_24h_percentage": float(full_data.get("price", {}).get("priceChange24hPercentage", 0)),
+                "all_time_high": float(full_data.get("price", {}).get("allTimeHigh", 0)),
+                "all_time_low": float(full_data.get("price", {}).get("allTimeLow", 0))
+            },
+            "volume": {
+                "volume_24h": float(full_data.get("volume", {}).get("volume24h", 0)),
+                "volume_7d": float(full_data.get("volume", {}).get("volume7d", 0))
+            },
+            "price_history": {
+                "daily": full_data.get("priceHistory", {}).get("daily", []),
+                "hourly": full_data.get("priceHistory", {}).get("hourly", []),
+                "minutely": full_data.get("priceHistory", {}).get("minutely", []),
+                "secondly": full_data.get("priceHistory", {}).get("secondly", [])
+            },
+            "trading": {
+                "bid_wall_balance": float(full_data.get("trading", {}).get("bidWallBalance", 0)),
+                "bid_wall_remaining": float(full_data.get("trading", {}).get("bidWallRemaining", 0)),
+                "buyback_progress": float(full_data.get("trading", {}).get("buybackProgress", 0))
+            },
+            "links": {
+                "flaunch": f"https://flaunch.gg/token/{token_address}",
+                "api_status": f"/admin/api-status{endpoint}"
+            },
+            "meta": full_data.get("meta", {})
+        })
+        
+    except requests.exceptions.Timeout:
+        return jsonify({
+            "error": "Request timeout fetching price history",
+            "api_name": api_config["name"],
+            "token_address": token_address
+        }), 504
+    except Exception as e:
+        return jsonify({
+            "error": f"Error fetching price history: {str(e)}",
+            "api_name": api_config["name"],
+            "token_address": token_address
+        }), 500
 
 
 @app.route("/admin/checkjobid", methods=["GET"])
