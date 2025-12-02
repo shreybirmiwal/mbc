@@ -48,7 +48,7 @@ class FlaunchTokenStore:
             "description": f"Pay with {symbol} to access {api_name}. Token price = API access cost.",
             "imageIpfs": SAFE_IMAGE_HASH,
             "creatorAddress": api_config["wallet_address"],
-            "marketCap": "10000000000",
+            "marketCap": "1000000",
             "creatorFeeSplit": "8000",
             "fairLaunchDuration": "0",
             "sniperProtection": True
@@ -96,7 +96,9 @@ class FlaunchTokenStore:
             return None
     
     def get_token_price_data(self, token_address: str) -> Optional[dict]:
-        """Get real-time token price from Flaunch Data API"""
+        """Get real-time token price from Flaunch Data API
+        Note: Flaunch API returns prices in USD/USDC (field name "priceETH" is misleading)
+        """
         try:
             response = requests.get(
                 f"{FLAUNCH_DATA_API}/{NETWORK}/tokens/{token_address}/price",
@@ -105,13 +107,30 @@ class FlaunchTokenStore:
             
             if response.status_code == 200:
                 data = response.json()
+                # Flaunch API returns prices in USD/USDC (despite confusing field name "priceETH")
+                # Store USD prices directly for x402 middleware
+                eth_price_usd = 3000  # Approximate ETH price in USD
+                
+                price_usd = float(data.get("price", {}).get("priceETH", 0))
+                market_cap_usd = float(data.get("price", {}).get("marketCapETH", 0))
+                all_time_high_usd = float(data.get("price", {}).get("allTimeHigh", 0))
+                all_time_low_usd = float(data.get("price", {}).get("allTimeLow", 0))
+                
+                # Convert from USD to ETH only for display purposes
+                price_eth = price_usd / eth_price_usd if eth_price_usd > 0 else 0
+                market_cap_eth = market_cap_usd / eth_price_usd if eth_price_usd > 0 else 0
+                all_time_high_eth = all_time_high_usd / eth_price_usd if eth_price_usd > 0 else 0
+                all_time_low_eth = all_time_low_usd / eth_price_usd if eth_price_usd > 0 else 0
+                
                 return {
-                    "price_eth": float(data.get("price", {}).get("priceETH", 0)),
-                    "market_cap_eth": float(data.get("price", {}).get("marketCapETH", 0)),
+                    "price_usd": price_usd,  # Store USD price directly
+                    "price_eth": price_eth,  # Also store ETH for display
+                    "market_cap_usd": market_cap_usd,
+                    "market_cap_eth": market_cap_eth,
                     "price_change_24h": float(data.get("price", {}).get("priceChange24h", 0)),
                     "volume_24h": float(data.get("volume", {}).get("volume24h", 0)),
-                    "all_time_high": float(data.get("price", {}).get("allTimeHigh", 0)),
-                    "all_time_low": float(data.get("price", {}).get("allTimeLow", 0))
+                    "all_time_high": all_time_high_eth,
+                    "all_time_low": all_time_low_eth
                 }
             return None
             
@@ -389,7 +408,7 @@ def api_status(endpoint):
             "symbol": api_config.get("symbol"),
             "price_eth": api_config.get("price_eth"),
             "price_data": api_config.get("price_data"),
-            "view_on_flaunch": f"https://flaunch.gg/token/{token_address}",
+            "view_on_flaunch": f"https://flaunch.gg/base/coin/{token_address}",
             "tx_hash": api_config.get("tx_hash")
         }
         response["payment_info"] = {
@@ -428,7 +447,7 @@ def list_apis():
                 "address": token_address,
                 "symbol": api_config.get("symbol"),
                 "price_eth": api_config.get("price_eth"),
-                "view_on_flaunch": f"https://flaunch.gg/token/{token_address}"
+                "view_on_flaunch": f"https://flaunch.gg/base/coin/{token_address}"
             }
         
         apis_info.append(info)
@@ -501,6 +520,21 @@ def get_api_info(endpoint):
         
         full_data = response.json()
         
+        # Flaunch API returns prices in USD/USDC, convert to ETH
+        # Approximate ETH price in USD (in production, fetch real-time rate)
+        eth_price_usd = 3000
+        
+        price_usd = float(full_data.get("price", {}).get("priceETH", 0))
+        market_cap_usd = float(full_data.get("price", {}).get("marketCapETH", 0))
+        all_time_high_usd = float(full_data.get("price", {}).get("allTimeHigh", 0))
+        all_time_low_usd = float(full_data.get("price", {}).get("allTimeLow", 0))
+        
+        # Convert from USD to ETH
+        price_eth = price_usd / eth_price_usd if eth_price_usd > 0 else 0
+        market_cap_eth = market_cap_usd / eth_price_usd if eth_price_usd > 0 else 0
+        all_time_high_eth = all_time_high_usd / eth_price_usd if eth_price_usd > 0 else 0
+        all_time_low_eth = all_time_low_usd / eth_price_usd if eth_price_usd > 0 else 0
+        
         return jsonify({
             "api_name": api_config["name"],
             "token_address": token_address,
@@ -511,12 +545,12 @@ def get_api_info(endpoint):
             "payment_protocol": "x402",
             "x402_enabled": True,
             "current_price": {
-                "price_eth": float(full_data.get("price", {}).get("priceETH", 0)),
-                "market_cap_eth": float(full_data.get("price", {}).get("marketCapETH", 0)),
+                "price_eth": price_eth,
+                "market_cap_eth": market_cap_eth,
                 "price_change_24h": float(full_data.get("price", {}).get("priceChange24h", 0)),
                 "price_change_24h_percentage": float(full_data.get("price", {}).get("priceChange24hPercentage", 0)),
-                "all_time_high": float(full_data.get("price", {}).get("allTimeHigh", 0)),
-                "all_time_low": float(full_data.get("price", {}).get("allTimeLow", 0))
+                "all_time_high": all_time_high_eth,
+                "all_time_low": all_time_low_eth
             },
             "volume": {
                 "volume_24h": float(full_data.get("volume", {}).get("volume24h", 0)),
@@ -541,6 +575,11 @@ def get_api_info(endpoint):
             "token_address": token_address
         }), 500
 
+@app.route("/admin/checkjobid", methods=["GET"])
+def check_jobid():
+    job_id = request.json.get("job_id")
+    print("CHECKING JOB ID: " + job_id)
+    return jsonify(store.check_launch_status(job_id))
 
 if __name__ == "__main__":
     # Start price sync thread
