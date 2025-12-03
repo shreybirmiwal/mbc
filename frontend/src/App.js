@@ -125,7 +125,6 @@ function APICard({ api, details }) {
 
   // Extract metrics from details
   const priceUsd = details?.current_price?.price_usd || 0;
-  const marketCapUsd = details?.current_price?.market_cap_usd || 0;
   const volume24h = details?.volume?.volume_24h || 0;
   const tokenSymbol = api.token?.symbol || details?.symbol || 'N/A';
   const tokenName = details?.api_name || api.name;
@@ -179,10 +178,6 @@ function APICard({ api, details }) {
             <div className="metric">
               <label>Price (USD)</label>
               <span className="metric-value">{formatCurrency(priceUsd)}</span>
-            </div>
-            <div className="metric">
-              <label>Market Cap</label>
-              <span className="metric-value">{formatCurrency(marketCapUsd)}</span>
             </div>
             <div className="metric">
               <label>24h Volume</label>
