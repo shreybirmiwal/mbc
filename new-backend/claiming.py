@@ -108,7 +108,7 @@ class FlaunchTokenStore:
                     "symbol": route.get("symbol", route["name"][:3].upper() + "API"),
                     "token_uri": route.get("token_uri"),
                     "tx_hash": route.get("tx_hash"),
-                    "flaunch_link": route.get("flaunch_link", f"https://flaunch.gg/token/{route['token_address']}"),
+                    "flaunch_link": route.get("flaunch_link", f"https://flaunch.gg/base/coin/{route['token_address']}"),
                     "created_at": route.get("created_at", time.time()),
                     "preexisting": True  # Mark as pre-existing
                 }
