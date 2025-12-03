@@ -123,15 +123,12 @@ function APICard({ api, details }) {
   const flaunchLink = api.token?.view_on_flaunch || details?.links?.flaunch;
   const tokenAddress = api.token?.address || details?.token_address;
 
-  // Extract pricing from details (new structure)
+  // Extract pricing from details (simplified structure)
   const tokenPriceUsd = details?.pricing?.token_price_usd || api.pricing?.token_price_usd || 0;
   const apiPriceUsd = details?.pricing?.api_price_usd || api.pricing?.api_price_usd || 0;
   const priceMultiplier = details?.pricing?.price_multiplier || api.pricing?.price_multiplier || 0;
-  
-  // Extract market metrics from details
-  const marketCapUsd = details?.market_data?.market_cap_usd || 0;
-  const volume24h = details?.market_data?.volume_24h_usd || 0;
-  const priceChange24h = details?.market_data?.price_change_24h_percentage || 0;
+  const volume24h = details?.pricing?.volume_24h_usd || api.pricing?.volume_24h_usd || 0;
+  const volume7d = details?.pricing?.volume_7d_usd || api.pricing?.volume_7d_usd || 0;
   
   const tokenSymbol = api.token?.symbol || details?.symbol || 'N/A';
   const tokenName = details?.api_name || api.name;
@@ -182,7 +179,7 @@ function APICard({ api, details }) {
             )}
           </div>
 
-          {/* Pricing Section - API Price vs Token Price */}
+          {/* Pricing Section - API Price */}
           <div className="pricing-section">
             <div className="price-highlight">
               <label>💰 API Price per Call</label>
@@ -190,25 +187,19 @@ function APICard({ api, details }) {
             </div>
             <div className="price-transform">
               <span className="transform-text">
-                Token Price: {formatCurrency(tokenPriceUsd)} × {priceMultiplier}
+                Token: {formatCurrency(tokenPriceUsd)} × {priceMultiplier}
               </span>
             </div>
           </div>
 
           <div className="metrics-grid">
             <div className="metric">
-              <label>Market Cap</label>
-              <span className="metric-value">{formatCurrency(marketCapUsd)}</span>
-            </div>
-            <div className="metric">
               <label>24h Volume</label>
               <span className="metric-value">{formatCurrency(volume24h)}</span>
             </div>
             <div className="metric">
-              <label>24h Change</label>
-              <span className={`metric-value ${priceChange24h >= 0 ? 'positive' : 'negative'}`}>
-                {priceChange24h >= 0 ? '+' : ''}{priceChange24h.toFixed(2)}%
-              </span>
+              <label>7d Volume</label>
+              <span className="metric-value">{formatCurrency(volume7d)}</span>
             </div>
             <div className="metric">
               <label>Contract Address</label>

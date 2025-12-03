@@ -126,8 +126,8 @@ class FlaunchTokenStore:
                     api_config["token_price_usd"] = token_price
                     api_config["api_price_usd"] = api_price
                     print(f"[INIT] Loaded {route['name']} ({endpoint})")
-                    print(f"       Token Price: ${token_price:.8f} USD | API Price: ${api_price:.6f} USD (x{price_multiplier})")
-                    print(f"       Market Cap: ${price_data['market_cap_usd']:.2f} USD | 24h Volume: ${price_data['volume_24h_usd']:.2f} USD")
+                    print(f"       Token: ${token_price:.8f} | API: ${api_price:.6f} (x{price_multiplier})")
+                    print(f"       Vol 24h: ${price_data['volume_24h_usd']:.2f} | Vol 7d: ${price_data['volume_7d_usd']:.2f}")
                 else:
                     # Use default price if unavailable
                     default_token_price = 0.000001
@@ -144,6 +144,73 @@ class FlaunchTokenStore:
             print(f"[INIT] Error parsing JSON file {routes_file}: {str(e)}")
         except Exception as e:
             print(f"[INIT] Error loading pre-existing routes from {routes_file}: {str(e)}")
+    
+    def save_api_to_json(self, api_config: dict, routes_file: Optional[str] = None):
+        """Save a new API to the preexisting_routes.json file"""
+        if routes_file is None:
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            routes_file = os.path.join(script_dir, "preexisting_routes.json")
+        
+        try:
+            # Read existing routes
+            routes = []
+            if os.path.exists(routes_file):
+                with open(routes_file, 'r') as f:
+                    routes = json.load(f)
+                    if not isinstance(routes, list):
+                        routes = []
+            
+            # Check if this endpoint already exists in the file
+            endpoint = api_config.get("endpoint", "")
+            existing_index = None
+            for i, route in enumerate(routes):
+                if route.get("endpoint") == endpoint:
+                    existing_index = i
+                    break
+            
+            # Prepare the route data
+            route_data = {
+                "name": api_config.get("name", ""),
+                "endpoint": endpoint,
+                "target_url": api_config.get("target_url", ""),
+                "method": api_config.get("method", "GET"),
+                "wallet_address": api_config.get("wallet_address", ""),
+                "description": api_config.get("description", ""),
+                "token_address": api_config.get("token_address", ""),
+                "symbol": api_config.get("symbol", ""),
+                "token_uri": api_config.get("token_uri"),
+                "tx_hash": api_config.get("tx_hash"),
+                "flaunch_link": api_config.get("flaunch_link") or (f"https://flaunch.gg/base/coin/{api_config.get('token_address', '')}" if api_config.get("token_address") else None)
+            }
+            
+            # Add optional fields if they exist
+            if api_config.get("input_format"):
+                route_data["input_format"] = api_config.get("input_format")
+            if api_config.get("output_format"):
+                route_data["output_format"] = api_config.get("output_format")
+            if api_config.get("price_multiplier") and api_config.get("price_multiplier") != self.default_price_multiplier:
+                route_data["price_multiplier"] = api_config.get("price_multiplier")
+            
+            # Remove None values
+            route_data = {k: v for k, v in route_data.items() if v is not None}
+            
+            # Update existing or add new
+            if existing_index is not None:
+                routes[existing_index] = route_data
+                print(f"[SAVE] Updated existing route in JSON: {endpoint}")
+            else:
+                routes.append(route_data)
+                print(f"[SAVE] Added new route to JSON: {endpoint}")
+            
+            # Write back to file
+            with open(routes_file, 'w') as f:
+                json.dump(routes, f, indent=4)
+                f.write('\n')  # Add newline at end of file
+            
+            print(f"[SAVE] Successfully saved {len(routes)} route(s) to {routes_file}")
+            
+        except Exception as e:
+            print(f"[SAVE] Error saving route to JSON file {routes_file}: {str(e)}")
 
     def launch_token_on_flaunch(self, api_config: dict) -> dict:
         """Launch a real token on Flaunch for this API"""
@@ -212,8 +279,7 @@ class FlaunchTokenStore:
     def get_token_price_data(self, token_address: str) -> Optional[dict]:
         """Get real-time token price from Flaunch Data API
         
-        Extracts actual USD prices from Flaunch API response.
-        Returns token price in USD and API price (with multiplier applied).
+        Returns only: priceUSDC, volumeUSDC24h, volumeUSDC7d
         """
         try:
             response = requests.get(
@@ -224,64 +290,21 @@ class FlaunchTokenStore:
             if response.status_code == 200:
                 data = response.json()
                 
-                # Method 1: Try to get from price history (most reliable - has priceUSDC)
-                price_history = data.get("priceHistory", {})
-                hourly_data = price_history.get("hourly", [])
-                daily_data = price_history.get("daily", [])
-                
-                token_price_usd = 0
-                volume_24h_usd = 0
-                
-                # Get most recent price from hourly data
-                if hourly_data and len(hourly_data) > 0:
-                    latest = hourly_data[-1]
-                    token_price_usd = float(latest.get("priceUSDC") or latest.get("closeUSDC") or 0)
-                    # Sum up 24h volume from hourly data
-                    volume_24h_usd = sum(float(p.get("volumeUSDC", 0)) for p in hourly_data[-24:])
-                elif daily_data and len(daily_data) > 0:
-                    latest = daily_data[-1]
-                    token_price_usd = float(latest.get("priceUSDC") or latest.get("closeUSDC") or 0)
-                    volume_24h_usd = float(latest.get("volumeUSDC", 0))
-                
-                # Method 2: Fallback to price object (but check for USDC fields first)
+                # Get priceUSDC directly from price object
                 price_obj = data.get("price", {})
-                if token_price_usd == 0:
-                    # Try marketCapUSDC and derive price, or use priceETH as last resort
-                    token_price_usd = float(price_obj.get("priceUSDC", 0))
-                    if token_price_usd == 0:
-                        # Last resort: use priceETH but it might actually be in USD
-                        token_price_usd = float(price_obj.get("priceETH", 0))
+                token_price_usd = float(price_obj.get("priceUSDC", 0))
                 
-                # Get market cap in USD (prefer marketCapUSDC)
-                market_cap_usd = float(price_obj.get("marketCapUSDC", 0))
-                if market_cap_usd == 0:
-                    market_cap_usd = abs(float(price_obj.get("marketCapETH", 0)))
+                # Get volumes from volume object
+                volume_obj = data.get("volume", {})
+                volume_24h_usd = float(volume_obj.get("volumeUSDC24h", 0))
+                volume_7d_usd = float(volume_obj.get("volumeUSDC7d", 0))
                 
-                # Get volume (fallback to volume object if not from history)
-                if volume_24h_usd == 0:
-                    volume_obj = data.get("volume", {})
-                    volume_24h_usd = float(volume_obj.get("volume24hUSDC", 0))
-                    if volume_24h_usd == 0:
-                        volume_24h_usd = float(volume_obj.get("volume24h", 0))
-                
-                # All-time high/low
-                all_time_high_usd = float(price_obj.get("allTimeHigh", 0))
-                all_time_low_usd = float(price_obj.get("allTimeLow", 0))
-                
-                # Price change
-                price_change_24h = float(price_obj.get("priceChange24h", 0))
-                price_change_24h_pct = float(price_obj.get("priceChange24hPercentage", 0))
-                
-                print(f"[PRICE] Token: ${token_price_usd:.8f} USD, MCap: ${market_cap_usd:.2f}, Vol24h: ${volume_24h_usd:.2f}")
+                print(f"[PRICE] Token: ${token_price_usd:.8f} USD, Vol24h: ${volume_24h_usd:.2f}, Vol7d: ${volume_7d_usd:.2f}")
                 
                 return {
-                    "token_price_usd": token_price_usd,  # Actual token price from Flaunch
-                    "market_cap_usd": market_cap_usd,
+                    "token_price_usd": token_price_usd,
                     "volume_24h_usd": volume_24h_usd,
-                    "price_change_24h": price_change_24h,
-                    "price_change_24h_percentage": price_change_24h_pct,
-                    "all_time_high_usd": all_time_high_usd,
-                    "all_time_low_usd": all_time_low_usd
+                    "volume_7d_usd": volume_7d_usd
                 }
             return None
             
@@ -404,6 +427,13 @@ class FlaunchTokenStore:
                 # Register with x402
                 self.update_x402_route(endpoint, api_config)
                 print(f"[x402] ✓ Payment route registered")
+                
+                # Update JSON file with token address now that it's deployed
+                try:
+                    self.save_api_to_json(api_config)
+                except Exception as e:
+                    print(f"[SAVE] Warning: Could not update JSON with token address: {str(e)}")
+                
                 return True
             
         return False
@@ -560,6 +590,13 @@ def create_api():
         
     if not deployed:
         print("[FLAUNCH] ⚠ Deployment pending or taking longer than expected.")
+    
+    # Save API to JSON file for persistence
+    # Save even if not fully deployed (will have job_id for later)
+    try:
+        store.save_api_to_json(api_config)
+    except Exception as e:
+        print(f"[SAVE] Warning: Could not save API to JSON: {str(e)}")
 
     response_data = {
         "success": True,
@@ -632,12 +669,13 @@ def api_status(endpoint):
             "view_on_flaunch": f"https://flaunch.gg/base/coin/{token_address}",
             "tx_hash": api_config.get("tx_hash")
         }
+        price_data = api_config.get("price_data", {})
         response["pricing"] = {
             "token_price_usd": token_price,
             "api_price_usd": api_price,
             "price_multiplier": price_multiplier,
-            "transform_explanation": f"API users pay ${api_price:.6f} (token price ${token_price:.8f} x {price_multiplier})",
-            "price_data": api_config.get("price_data")
+            "volume_24h_usd": price_data.get("volume_24h_usd", 0),
+            "volume_7d_usd": price_data.get("volume_7d_usd", 0)
         }
         response["payment_info"] = {
             "protocol": "x402",
@@ -770,6 +808,7 @@ def list_apis():
         }
         
         if token_address:
+            price_data = api_config.get("price_data", {})
             info["token"] = {
                 "address": token_address,
                 "symbol": api_config.get("symbol"),
@@ -778,7 +817,9 @@ def list_apis():
             info["pricing"] = {
                 "token_price_usd": api_config.get("token_price_usd"),
                 "api_price_usd": api_config.get("api_price_usd"),
-                "price_multiplier": api_config.get("price_multiplier")
+                "price_multiplier": api_config.get("price_multiplier"),
+                "volume_24h_usd": price_data.get("volume_24h_usd", 0),
+                "volume_7d_usd": price_data.get("volume_7d_usd", 0)
             }
         
         apis_info.append(info)
@@ -875,11 +916,6 @@ def get_api_info(endpoint):
         price_multiplier = api_config.get("price_multiplier", store.default_price_multiplier)
         api_price_usd = token_price_usd * price_multiplier
         
-        # Get volume data
-        price_history_raw = full_data.get("priceHistory", {})
-        daily_data = price_history_raw.get("daily", [])
-        volume_7d_usd = sum(float(p.get("volumeUSDC", 0)) for p in daily_data) if daily_data else 0
-        
         return jsonify({
             "api_name": api_config["name"],
             "token_address": token_address,
@@ -888,38 +924,16 @@ def get_api_info(endpoint):
             "target_url": api_config["target_url"],
             "method": api_config["method"],
             "description": api_config.get("description", ""),
-            "input_format": api_config.get("input_format", {}),
-            "output_format": api_config.get("output_format", {}),
-            "schema_endpoint": f"/admin/api-schema{endpoint}",
             "payment_protocol": "x402",
             "x402_enabled": True,
             
-            # Pricing Information - clearly separated
+            # Pricing Information
             "pricing": {
                 "token_price_usd": token_price_usd,
                 "api_price_usd": api_price_usd,
                 "price_multiplier": price_multiplier,
-                "transform_explanation": f"Token ${token_price_usd:.8f} USD x {price_multiplier} = API ${api_price_usd:.6f} USD per call"
-            },
-            
-            # Market Data from Flaunch
-            "market_data": {
-                "market_cap_usd": price_data["market_cap_usd"],
                 "volume_24h_usd": price_data["volume_24h_usd"],
-                "volume_7d_usd": volume_7d_usd,
-                "price_change_24h": price_data["price_change_24h"],
-                "price_change_24h_percentage": price_data["price_change_24h_percentage"],
-                "all_time_high_usd": price_data["all_time_high_usd"],
-                "all_time_low_usd": price_data["all_time_low_usd"]
-            },
-            
-            # Price History (raw from Flaunch)
-            "price_history": {
-                "note": "All prices in priceUSDC/closeUSDC fields are USD prices",
-                "daily": full_data.get("priceHistory", {}).get("daily", []),
-                "hourly": full_data.get("priceHistory", {}).get("hourly", []),
-                "minutely": full_data.get("priceHistory", {}).get("minutely", []),
-                "secondly": full_data.get("priceHistory", {}).get("secondly", [])
+                "volume_7d_usd": price_data["volume_7d_usd"]
             },
             
             # Links

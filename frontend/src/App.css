@@ -247,14 +247,6 @@ body {
     font-weight: 700;
 }
 
-.metric-value.positive {
-    color: #10b981;
-}
-
-.metric-value.negative {
-    color: #ef4444;
-}
-
 .metric-value.contract-address {
     font-family: 'Courier New', monospace;
     font-size: 0.95rem;
