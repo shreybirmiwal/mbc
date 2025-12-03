@@ -19,8 +19,19 @@ import requests
 from typing import Dict, Optional
 import json
 import os
+from dotenv import load_dotenv
 from x402.flask.middleware import PaymentMiddleware
-from pydantic import ValidationError
+from cdp.x402 import create_facilitator_config
+try:
+    from pydantic import ValidationError
+except ImportError:
+    try:
+        from pydantic_core import ValidationError
+    except ImportError:
+        ValidationError = Exception
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -44,14 +55,30 @@ def handle_preflight():
 # Flaunch API Configuration
 FLAUNCH_BASE_URL = "https://web2-api.flaunch.gg/api/v1"
 FLAUNCH_DATA_API = "https://dev-api.flayerlabs.xyz/v1"
-NETWORK = "base-sepolia"  # Using testnet - change to "base" for mainnet
-FACILITATOR_URL = "https://x402.org/facilitator"  # Testnet facilitator
+NETWORK = "base"  # Mainnet - using Base network for production
+
+# CDP Facilitator Configuration for Mainnet
+CDP_API_KEY_ID = os.getenv("CDP_API_KEY_ID")
+CDP_API_KEY_SECRET = os.getenv("CDP_API_KEY_SECRET")
+
+if not CDP_API_KEY_ID or not CDP_API_KEY_SECRET:
+    raise ValueError(
+        "CDP_API_KEY_ID and CDP_API_KEY_SECRET must be set in environment variables. "
+        "Please add them to your .env file."
+    )
+
+# Create facilitator config for mainnet
+facilitator_config = create_facilitator_config(
+    api_key_id=CDP_API_KEY_ID,
+    api_key_secret=CDP_API_KEY_SECRET,
+)
 
 class FlaunchTokenStore:
     def __init__(self, preexisting_routes_file: Optional[str] = None):
         self.apis: Dict[str, dict] = {}
         self.launch_jobs: Dict[str, str] = {}
         self.price_sync_thread = None
+        # Initialize PaymentMiddleware (facilitator_config passed to add() method)
         self.payment_middleware = PaymentMiddleware(app)
         
         # Price multiplier to transform tiny token prices into reasonable API prices
@@ -373,7 +400,8 @@ class FlaunchTokenStore:
             path=endpoint,
             price=price_str,
             pay_to_address=api_config["wallet_address"],
-            network="base-sepolia" if NETWORK == "base-sepolia" else "base"
+            network="base",  # Mainnet Base network
+            facilitator_config=facilitator_config  # CDP facilitator for mainnet
         )
         
         symbol = api_config.get('symbol', 'token')
@@ -470,26 +498,39 @@ def proxy_to_target_api(target_url: str, method: str = "GET"):
 @app.errorhandler(Exception)
 def handle_x402_error(e):
     """Handle x402 middleware errors and other exceptions"""
+    error_msg = str(e)
+    error_type = str(type(e))
+    
     # Check if this is a Pydantic validation error from x402
-    if isinstance(e, ValidationError) or (hasattr(e, '__class__') and 'ValidationError' in str(type(e))):
-        error_msg = str(e)
-        if 'payer' in error_msg.lower() or 'VerifyResponse' in error_msg:
-            print(f"[x402 ERROR] Payment verification failed: {error_msg}")
-            return jsonify({
-                "error": "Payment verification failed",
-                "message": "The payment verification service encountered an error. Please ensure you're using the correct network (base-sepolia testnet).",
-                "details": "The facilitator may not support the requested network or the payment response was invalid.",
-                "network": NETWORK,
-                "facilitator": FACILITATOR_URL
-            }), 500
+    is_validation_error = (
+        isinstance(e, ValidationError) or 
+        'ValidationError' in error_type or
+        'pydantic' in error_type.lower()
+    )
+    
+    if is_validation_error and ('payer' in error_msg.lower() or 'VerifyResponse' in error_msg):
+        print(f"[x402 ERROR] Payment verification failed: {error_msg}")
+        print(f"[x402 ERROR] Error type: {error_type}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "error": "Payment verification failed",
+            "message": "The payment verification service encountered an error. Please ensure you're using the correct network (Base mainnet).",
+            "details": "The facilitator may not support the requested network or the payment response was invalid.",
+            "network": NETWORK,
+            "facilitator": "CDP Facilitator (mainnet)",
+            "error_type": error_type
+        }), 500
     
     # For other exceptions, log and return generic error
-    print(f"[ERROR] Unhandled exception: {str(e)}")
+    print(f"[ERROR] Unhandled exception: {error_msg}")
+    print(f"[ERROR] Error type: {error_type}")
     import traceback
     traceback.print_exc()
     return jsonify({
         "error": "Internal server error",
-        "message": "An unexpected error occurred while processing your request."
+        "message": "An unexpected error occurred while processing your request.",
+        "error_type": error_type
     }), 500
 
 
@@ -718,7 +759,7 @@ def api_status(endpoint):
             "protocol": "x402",
             "currency": "USDC",
             "amount_per_call": f"${api_price:.6f}",
-            "chain": "base" if NETWORK == "base" else "base-sepolia",
+            "chain": "base",  # Mainnet Base network
             "price_updates": "Real-time from Flaunch DEX (with multiplier transform)"
         }
     else:
@@ -876,8 +917,8 @@ def health():
         "message": "x402 + Flaunch: Wrap any API with token payments",
         "protocol": "x402",
         "network": NETWORK,
-        "chain_id": 84532 if NETWORK == "base-sepolia" else 8453,
-        "facilitator": FACILITATOR_URL,
+        "chain_id": 8453,  # Base mainnet chain ID
+        "facilitator": "CDP Facilitator (mainnet)",
         "endpoints": {
             "create_api": "POST /admin/create-api",
             "list_apis": "GET /admin/list-apis",
@@ -1006,8 +1047,8 @@ if __name__ == "__main__":
     print(f"{'='*60}")
     print(f"Protocol: x402")
     print(f"Network: {NETWORK}")
-    print(f"Chain ID: {84532 if NETWORK == 'base-sepolia' else 8453}")
-    print(f"Facilitator: {FACILITATOR_URL}")
+    print(f"Chain ID: 8453 (Base mainnet)")
+    print(f"Facilitator: CDP Facilitator (mainnet)")
     print(f"\nWrap any existing API with x402 token-based payments!")
     print(f"Real tokens launched on Flaunch, prices synced to x402")
     print(f"{'='*60}\n")
