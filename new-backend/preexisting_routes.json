@@ -24,5 +24,18 @@
         "token_uri": "https://flaunch.gg/base/coin/0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a",
         "tx_hash": "0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321",
         "flaunch_link": "https://flaunch.gg/base/coin/0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a"
+    },
+    {
+        "name": "shreyTest",
+        "endpoint": "/sb",
+        "target_url": "https://flaunch.gg/base/coin/0xd7719458df4f10e2e9d975b20916499b09d8ae25",
+        "method": "GET",
+        "wallet_address": "0xaf05dB6c0148F42e70eDBaB9357DD0D4edb6d1a4",
+        "description": "yipeeeeee",
+        "token_address": "0x8554c4eb957e06c51dcb73540f720ab952e6c180",
+        "symbol": "SHRAPI",
+        "token_uri": "ipfs://Qmb99W6kesh8JBEFcWssGeSYPWoRUGDppEFcU3nWqgdqZL",
+        "tx_hash": "0x8c25d30bde164d8723723f36ece5074fa91095d9492f86fd771d0ba44077d855",
+        "flaunch_link": "https://flaunch.gg/base/coin/0x8554c4eb957e06c51dcb73540f720ab952e6c180"
     }
 ]

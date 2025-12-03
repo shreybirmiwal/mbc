@@ -20,6 +20,7 @@ from typing import Dict, Optional
 import json
 import os
 from x402.flask.middleware import PaymentMiddleware
+from pydantic import ValidationError
 
 app = Flask(__name__)
 
@@ -43,8 +44,8 @@ def handle_preflight():
 # Flaunch API Configuration
 FLAUNCH_BASE_URL = "https://web2-api.flaunch.gg/api/v1"
 FLAUNCH_DATA_API = "https://dev-api.flayerlabs.xyz/v1"
-NETWORK = "base"  # Change to "base-sepolia" for testnet
-FACILITATOR_URL = "https://x402.org/facilitator"  # For testnet
+NETWORK = "base-sepolia"  # Using testnet - change to "base" for mainnet
+FACILITATOR_URL = "https://x402.org/facilitator"  # Testnet facilitator
 
 class FlaunchTokenStore:
     def __init__(self, preexisting_routes_file: Optional[str] = None):
@@ -466,34 +467,70 @@ def proxy_to_target_api(target_url: str, method: str = "GET"):
         return jsonify({"error": f"Target API error: {str(e)}"}), 502
 
 
+@app.errorhandler(Exception)
+def handle_x402_error(e):
+    """Handle x402 middleware errors and other exceptions"""
+    # Check if this is a Pydantic validation error from x402
+    if isinstance(e, ValidationError) or (hasattr(e, '__class__') and 'ValidationError' in str(type(e))):
+        error_msg = str(e)
+        if 'payer' in error_msg.lower() or 'VerifyResponse' in error_msg:
+            print(f"[x402 ERROR] Payment verification failed: {error_msg}")
+            return jsonify({
+                "error": "Payment verification failed",
+                "message": "The payment verification service encountered an error. Please ensure you're using the correct network (base-sepolia testnet).",
+                "details": "The facilitator may not support the requested network or the payment response was invalid.",
+                "network": NETWORK,
+                "facilitator": FACILITATOR_URL
+            }), 500
+    
+    # For other exceptions, log and return generic error
+    print(f"[ERROR] Unhandled exception: {str(e)}")
+    import traceback
+    traceback.print_exc()
+    return jsonify({
+        "error": "Internal server error",
+        "message": "An unexpected error occurred while processing your request."
+    }), 500
+
+
 @app.route("/<path:endpoint>", methods=["GET", "POST"])
 def dynamic_api(endpoint):
     """
     Handle all dynamic API endpoints
     Payment is now handled by x402 middleware automatically
     """
-    endpoint = "/" + endpoint
-    
-    # Try to finalize token if still pending
-    if endpoint in store.apis:
-        if not store.apis[endpoint].get("token_address"):
-            time.sleep(5)
-            if not store.finalize_token_launch(endpoint):
-                return jsonify({
-                    "error": "Token still launching",
-                    "status": "Token deployment in progress. Please try again in a moment.",
-                    "job_id": store.apis[endpoint].get("job_id")
-                }), 503
-    else:
-        return jsonify({"error": "API endpoint not found"}), 404
-    
-    # If we reach here, x402 middleware has already verified payment
-    # Proxy to target API
-    api_config = store.apis[endpoint]
-    target_url = api_config["target_url"]
-    method = api_config.get("method", "GET")
-    
-    return proxy_to_target_api(target_url, method)
+    try:
+        endpoint = "/" + endpoint
+        
+        # Try to finalize token if still pending
+        if endpoint in store.apis:
+            if not store.apis[endpoint].get("token_address"):
+                time.sleep(5)
+                if not store.finalize_token_launch(endpoint):
+                    return jsonify({
+                        "error": "Token still launching",
+                        "status": "Token deployment in progress. Please try again in a moment.",
+                        "job_id": store.apis[endpoint].get("job_id")
+                    }), 503
+        else:
+            return jsonify({"error": "API endpoint not found"}), 404
+        
+        # If we reach here, x402 middleware has already verified payment
+        # Proxy to target API
+        api_config = store.apis[endpoint]
+        target_url = api_config["target_url"]
+        method = api_config.get("method", "GET")
+        
+        return proxy_to_target_api(target_url, method)
+    except Exception as e:
+        # Catch any exceptions that might occur during request processing
+        print(f"[ERROR] Exception in dynamic_api: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "error": "Request processing failed",
+            "message": str(e)
+        }), 500
 
 
 @app.route("/admin/create-api", methods=["POST"])

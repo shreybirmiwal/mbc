@@ -3,6 +3,10 @@ import './App.css';
 
 const API_BASE_URL = 'http://127.0.0.1:5000';
 
+// Constants for API creation (not visible to users)
+const DEFAULT_PRICE_MULTIPLIER = 10000;
+const DEFAULT_STARTING_MARKET_CAP = '1000000';
+
 function App() {
   const [apis, setApis] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -129,7 +133,7 @@ function APICard({ api, details }) {
   const priceMultiplier = details?.pricing?.price_multiplier || api.pricing?.price_multiplier || 0;
   const volume24h = details?.pricing?.volume_24h_usd || api.pricing?.volume_24h_usd || 0;
   const volume7d = details?.pricing?.volume_7d_usd || api.pricing?.volume_7d_usd || 0;
-  
+
   const tokenSymbol = api.token?.symbol || details?.symbol || 'N/A';
   const tokenName = details?.api_name || api.name;
 
@@ -234,8 +238,8 @@ function CreateAPIForm({ onSubmit, onCancel }) {
     method: 'GET',
     wallet_address: '',
     description: '',
-    price_multiplier: 10000,
-    starting_market_cap: '1000000',
+    price_multiplier: DEFAULT_PRICE_MULTIPLIER,
+    starting_market_cap: DEFAULT_STARTING_MARKET_CAP,
     input_format: {},
     output_format: {}
   });
@@ -328,30 +332,6 @@ function CreateAPIForm({ onSubmit, onCancel }) {
             placeholder="Describe what this API does..."
             rows="3"
           />
-        </div>
-
-        <div className="form-group">
-          <label>Price Multiplier (Optional)</label>
-          <input
-            type="number"
-            name="price_multiplier"
-            value={formData.price_multiplier}
-            onChange={handleChange}
-            placeholder="10000"
-          />
-          <small className="form-help">Token price × multiplier = API price. Default: 10000</small>
-        </div>
-
-        <div className="form-group">
-          <label>Starting Market Cap (Optional)</label>
-          <input
-            type="text"
-            name="starting_market_cap"
-            value={formData.starting_market_cap}
-            onChange={handleChange}
-            placeholder="1000000"
-          />
-          <small className="form-help">In wei. 1,000,000 wei ≈ $1 USD. Default: 1000000</small>
         </div>
 
         <div className="form-actions">
