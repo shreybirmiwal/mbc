@@ -805,21 +805,26 @@ def get_api_info(endpoint):
             else:
                 price_usd = raw_price
         
-        # Get market cap from main price object - marketCapETH is in USD/USDC (despite name)
+        # Get market cap from main price object - use marketCapUSDC (in USD) instead of marketCapETH
         price_obj = full_data.get("price", {})
         print(f"[DEBUG] Price object keys: {list(price_obj.keys())}")
+        print(f"[DEBUG] marketCapUSDC raw: {price_obj.get('marketCapUSDC')}")
         print(f"[DEBUG] marketCapETH raw: {price_obj.get('marketCapETH')}")
         
-        market_cap_usd = float(price_obj.get("marketCapETH", 0))
+        # Use marketCapUSDC first (it's in USD/USDC)
+        market_cap_usd = float(price_obj.get("marketCapUSDC", 0))
         
-        # If market cap is negative or zero, it might be in wrong units or need conversion
-        if market_cap_usd <= 0 or abs(market_cap_usd) > 1e20:
-            # Try converting if it's in smallest units
-            raw_mcap = float(price_obj.get("marketCapETH", 0))
-            if abs(raw_mcap) > 1e15:
-                market_cap_usd = abs(raw_mcap) / 1e18
-            # If still negative or zero, try to calculate from price
-            # Market cap = price * total supply (but we don't have supply, so skip)
+        # If marketCapUSDC is not available or invalid, try marketCapETH
+        if market_cap_usd <= 0:
+            raw_mcap_eth = float(price_obj.get("marketCapETH", 0))
+            # If it's negative, take absolute value
+            if raw_mcap_eth < 0:
+                raw_mcap_eth = abs(raw_mcap_eth)
+            # If it's very large, it might be in smallest units, convert
+            if raw_mcap_eth > 1e15:
+                market_cap_usd = raw_mcap_eth / 1e18
+            elif raw_mcap_eth > 0:
+                market_cap_usd = raw_mcap_eth
         
         # Ensure market cap is positive
         if market_cap_usd < 0:
