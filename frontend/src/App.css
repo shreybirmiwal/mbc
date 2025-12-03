@@ -179,6 +179,48 @@ body {
     text-decoration: underline;
 }
 
+/* Pricing Section - API Price vs Token Price */
+.pricing-section {
+    margin: 20px 0;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea15, #764ba215);
+    border-radius: 12px;
+    border: 2px solid #667eea30;
+}
+
+.price-highlight {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.price-highlight label {
+    font-size: 0.95rem;
+    color: #666;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.api-price {
+    font-size: 2rem;
+    color: #667eea;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+}
+
+.price-transform {
+    padding-top: 8px;
+    border-top: 1px solid #667eea20;
+}
+
+.transform-text {
+    font-size: 0.9rem;
+    color: #888;
+    font-family: 'Courier New', monospace;
+}
+
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -203,6 +245,14 @@ body {
     font-size: 1.3rem;
     color: #333;
     font-weight: 700;
+}
+
+.metric-value.positive {
+    color: #10b981;
+}
+
+.metric-value.negative {
+    color: #ef4444;
 }
 
 .metric-value.contract-address {
@@ -439,6 +489,14 @@ body {
 .form-group textarea {
     resize: vertical;
     min-height: 80px;
+}
+
+.form-help {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.85rem;
+    color: #888;
+    font-style: italic;
 }
 
 .form-actions {

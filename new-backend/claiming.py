@@ -152,10 +152,9 @@ class FlaunchTokenStore:
         
         SAFE_IMAGE_HASH = "QmX7UbPKJ7Drci3y6p6E8oi5TpUiG7NH3qSzcohPX9Xkvo"
         
-        # Use standard starting market cap (in USD)
-        # Lower market cap = more reasonable starting token price
-        # Default: $10,000 - gives starting price around $0.0001
-        starting_market_cap = api_config.get("starting_market_cap", "10000")
+        # Market cap in wei/smallest units (1M wei ≈ $1 USD)
+        # Default: 1,000,000 wei ≈ $1 USD starting market cap
+        starting_market_cap = api_config.get("starting_market_cap", "1000000")
         
         launch_data = {
             "name": f"{api_name} Token",
@@ -525,7 +524,7 @@ def create_api():
         "input_format": data.get("input_format", {}),
         "output_format": data.get("output_format", {}),
         "price_multiplier": data.get("price_multiplier", store.default_price_multiplier),
-        "starting_market_cap": data.get("starting_market_cap", "10000"),  # USD
+        "starting_market_cap": data.get("starting_market_cap", "1000000"),  # wei (1M wei ≈ $1)
         "created_at": time.time()
     }
     

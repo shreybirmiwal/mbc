@@ -123,16 +123,24 @@ function APICard({ api, details }) {
   const flaunchLink = api.token?.view_on_flaunch || details?.links?.flaunch;
   const tokenAddress = api.token?.address || details?.token_address;
 
-  // Extract metrics from details
-  const priceUsd = details?.current_price?.price_usd || 0;
-  const volume24h = details?.volume?.volume_24h || 0;
+  // Extract pricing from details (new structure)
+  const tokenPriceUsd = details?.pricing?.token_price_usd || api.pricing?.token_price_usd || 0;
+  const apiPriceUsd = details?.pricing?.api_price_usd || api.pricing?.api_price_usd || 0;
+  const priceMultiplier = details?.pricing?.price_multiplier || api.pricing?.price_multiplier || 0;
+  
+  // Extract market metrics from details
+  const marketCapUsd = details?.market_data?.market_cap_usd || 0;
+  const volume24h = details?.market_data?.volume_24h_usd || 0;
+  const priceChange24h = details?.market_data?.price_change_24h_percentage || 0;
+  
   const tokenSymbol = api.token?.symbol || details?.symbol || 'N/A';
   const tokenName = details?.api_name || api.name;
 
   // Format numbers
   const formatCurrency = (value) => {
     if (value === 0) return '$0.00';
-    if (value < 0.01) return `$${value.toFixed(6)}`;
+    if (value < 0.000001) return `$${value.toFixed(10)}`;
+    if (value < 0.01) return `$${value.toFixed(8)}`;
     if (value < 1) return `$${value.toFixed(4)}`;
     if (value < 1000) return `$${value.toFixed(2)}`;
     if (value < 1000000) return `$${(value / 1000).toFixed(2)}K`;
@@ -174,14 +182,33 @@ function APICard({ api, details }) {
             )}
           </div>
 
+          {/* Pricing Section - API Price vs Token Price */}
+          <div className="pricing-section">
+            <div className="price-highlight">
+              <label>💰 API Price per Call</label>
+              <span className="api-price">{formatCurrency(apiPriceUsd)}</span>
+            </div>
+            <div className="price-transform">
+              <span className="transform-text">
+                Token Price: {formatCurrency(tokenPriceUsd)} × {priceMultiplier}
+              </span>
+            </div>
+          </div>
+
           <div className="metrics-grid">
             <div className="metric">
-              <label>Price (USD)</label>
-              <span className="metric-value">{formatCurrency(priceUsd)}</span>
+              <label>Market Cap</label>
+              <span className="metric-value">{formatCurrency(marketCapUsd)}</span>
             </div>
             <div className="metric">
               <label>24h Volume</label>
               <span className="metric-value">{formatCurrency(volume24h)}</span>
+            </div>
+            <div className="metric">
+              <label>24h Change</label>
+              <span className={`metric-value ${priceChange24h >= 0 ? 'positive' : 'negative'}`}>
+                {priceChange24h >= 0 ? '+' : ''}{priceChange24h.toFixed(2)}%
+              </span>
             </div>
             <div className="metric">
               <label>Contract Address</label>
@@ -216,6 +243,8 @@ function CreateAPIForm({ onSubmit, onCancel }) {
     method: 'GET',
     wallet_address: '',
     description: '',
+    price_multiplier: 10000,
+    starting_market_cap: '1000000',
     input_format: {},
     output_format: {}
   });
@@ -308,6 +337,30 @@ function CreateAPIForm({ onSubmit, onCancel }) {
             placeholder="Describe what this API does..."
             rows="3"
           />
+        </div>
+
+        <div className="form-group">
+          <label>Price Multiplier (Optional)</label>
+          <input
+            type="number"
+            name="price_multiplier"
+            value={formData.price_multiplier}
+            onChange={handleChange}
+            placeholder="10000"
+          />
+          <small className="form-help">Token price × multiplier = API price. Default: 10000</small>
+        </div>
+
+        <div className="form-group">
+          <label>Starting Market Cap (Optional)</label>
+          <input
+            type="text"
+            name="starting_market_cap"
+            value={formData.starting_market_cap}
+            onChange={handleChange}
+            placeholder="1000000"
+          />
+          <small className="form-help">In wei. 1,000,000 wei ≈ $1 USD. Default: 1000000</small>
         </div>
 
         <div className="form-actions">
