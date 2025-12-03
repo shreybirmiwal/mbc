@@ -119,9 +119,27 @@ function App() {
 }
 
 function APICard({ api, details }) {
-  const [expanded, setExpanded] = useState(false);
   const apiUrl = `${API_BASE_URL}${api.endpoint}`;
   const flaunchLink = api.token?.view_on_flaunch || details?.links?.flaunch;
+  const tokenAddress = api.token?.address || details?.token_address;
+
+  // Extract metrics from details
+  const priceUsd = details?.current_price?.price_usd || 0;
+  const marketCapUsd = details?.current_price?.market_cap_usd || 0;
+  const volume24h = details?.volume?.volume_24h || 0;
+  const tokenSymbol = api.token?.symbol || details?.symbol || 'N/A';
+  const tokenName = details?.api_name || api.name;
+
+  // Format numbers
+  const formatCurrency = (value) => {
+    if (value === 0) return '$0.00';
+    if (value < 0.01) return `$${value.toFixed(6)}`;
+    if (value < 1) return `$${value.toFixed(4)}`;
+    if (value < 1000) return `$${value.toFixed(2)}`;
+    if (value < 1000000) return `$${(value / 1000).toFixed(2)}K`;
+    if (value < 1000000000) return `$${(value / 1000000).toFixed(2)}M`;
+    return `$${(value / 1000000000).toFixed(2)}B`;
+  };
 
   return (
     <div className="api-card">
@@ -139,14 +157,43 @@ function APICard({ api, details }) {
       </div>
 
       {api.token && (
-        <div className="api-token-info">
-          <div className="token-details">
-            <span className="token-symbol">{api.token.symbol}</span>
-            {api.token.price_eth && (
-              <span className="token-price">
-                {parseFloat(api.token.price_eth).toFixed(8)} ETH
-              </span>
+        <div className="token-metrics">
+          <div className="token-header">
+            <div className="token-name-symbol">
+              <h3>{tokenName}</h3>
+              <span className="token-symbol">{tokenSymbol}</span>
+            </div>
+            {flaunchLink && (
+              <a
+                href={flaunchLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flaunch-link"
+              >
+                View on Flaunch →
+              </a>
             )}
+          </div>
+
+          <div className="metrics-grid">
+            <div className="metric">
+              <label>Price (USD)</label>
+              <span className="metric-value">{formatCurrency(priceUsd)}</span>
+            </div>
+            <div className="metric">
+              <label>Market Cap</label>
+              <span className="metric-value">{formatCurrency(marketCapUsd)}</span>
+            </div>
+            <div className="metric">
+              <label>24h Volume</label>
+              <span className="metric-value">{formatCurrency(volume24h)}</span>
+            </div>
+            <div className="metric">
+              <label>Contract Address</label>
+              <span className="metric-value contract-address">
+                {tokenAddress ? `${tokenAddress.slice(0, 6)}...${tokenAddress.slice(-4)}` : 'N/A'}
+              </span>
+            </div>
           </div>
         </div>
       )}
@@ -160,129 +207,11 @@ function APICard({ api, details }) {
         >
           🔗 API Endpoint (x402)
         </a>
-        {flaunchLink && (
-          <a
-            href={flaunchLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="link-button"
-          >
-            📊 View on Flaunch
-          </a>
-        )}
-        <button
-          className="toggle-button"
-          onClick={() => setExpanded(!expanded)}
-        >
-          {expanded ? '▼ Hide' : '▶ Show'} Price History
-        </button>
       </div>
-
-      {expanded && details && (
-        <div className="price-history-section">
-          <PriceChart priceHistory={details.price_history} />
-          <div className="price-stats">
-            {details.current_price && (
-              <>
-                <div className="stat">
-                  <label>Current Price:</label>
-                  <span>{parseFloat(details.current_price.price_eth || 0).toFixed(8)} ETH</span>
-                </div>
-                {details.current_price.price_change_24h_percentage !== undefined && (
-                  <div className="stat">
-                    <label>24h Change:</label>
-                    <span className={details.current_price.price_change_24h_percentage >= 0 ? 'positive' : 'negative'}>
-                      {details.current_price.price_change_24h_percentage.toFixed(2)}%
-                    </span>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-function PriceChart({ priceHistory }) {
-  if (!priceHistory) {
-    return <div className="no-chart-data">No price history available</div>;
-  }
-
-  // Use hourly data if available, otherwise daily, then minutely
-  let chartData = [];
-  if (priceHistory.hourly && priceHistory.hourly.length > 0) {
-    chartData = priceHistory.hourly.slice(-24).map((point, index) => ({
-      time: index,
-      price: parseFloat(point.price || point.priceETH || 0),
-      timestamp: point.timestamp || point.time || index
-    }));
-  } else if (priceHistory.daily && priceHistory.daily.length > 0) {
-    chartData = priceHistory.daily.slice(-30).map((point, index) => ({
-      time: index,
-      price: parseFloat(point.price || point.priceETH || 0),
-      timestamp: point.timestamp || point.time || index
-    }));
-  } else if (priceHistory.minutely && priceHistory.minutely.length > 0) {
-    chartData = priceHistory.minutely.slice(-60).map((point, index) => ({
-      time: index,
-      price: parseFloat(point.price || point.priceETH || 0),
-      timestamp: point.timestamp || point.time || index
-    }));
-  }
-
-  if (chartData.length === 0) {
-    return <div className="no-chart-data">No price history data available</div>;
-  }
-
-  // Simple line chart using SVG
-  const maxPrice = Math.max(...chartData.map(d => d.price));
-  const minPrice = Math.min(...chartData.map(d => d.price));
-  const range = maxPrice - minPrice || 1;
-  const width = 600;
-  const height = 200;
-  const padding = 40;
-
-  const points = chartData.map((d, i) => {
-    // Handle single point case to avoid division by zero
-    const x = chartData.length === 1
-      ? padding + (width - 2 * padding) / 2  // Center the single point
-      : padding + (i / (chartData.length - 1)) * (width - 2 * padding);
-    const y = padding + (height - 2 * padding) - ((d.price - minPrice) / range) * (height - 2 * padding);
-    return `${x},${y}`;
-  }).join(' ');
-
-  return (
-    <div className="price-chart">
-      <h3>Price History</h3>
-      <svg width={width} height={height} className="chart-svg">
-        <defs>
-          <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#4f46e5" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="#4f46e5" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <polyline
-          points={points}
-          fill="none"
-          stroke="#4f46e5"
-          strokeWidth="2"
-        />
-        <polygon
-          points={`${padding},${height - padding} ${points} ${width - padding},${height - padding}`}
-          fill="url(#gradient)"
-        />
-        <text x={padding} y={padding} fontSize="12" fill="#666">
-          {maxPrice.toFixed(8)} ETH
-        </text>
-        <text x={padding} y={height - padding + 15} fontSize="12" fill="#666">
-          {minPrice.toFixed(8)} ETH
-        </text>
-      </svg>
-    </div>
-  );
-}
 
 function CreateAPIForm({ onSubmit, onCancel }) {
   const [formData, setFormData] = useState({

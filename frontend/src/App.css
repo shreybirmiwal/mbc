@@ -130,28 +130,86 @@ body {
     color: white;
 }
 
-.api-token-info {
-    margin: 16px 0;
-    padding: 12px;
-    background: #f3f4f6;
+.token-metrics {
+    margin: 20px 0;
+    padding: 20px;
+    background: #f9fafb;
     border-radius: 8px;
+    border: 1px solid #e5e7eb;
 }
 
-.token-details {
+.token-header {
     display: flex;
-    gap: 16px;
+    justify-content: space-between;
     align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.token-name-symbol {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.token-name-symbol h3 {
+    margin: 0;
+    color: #333;
+    font-size: 1.3rem;
 }
 
 .token-symbol {
     font-weight: 700;
     color: #667eea;
-    font-size: 1.1rem;
+    font-size: 1rem;
+    text-transform: uppercase;
 }
 
-.token-price {
-    color: #333;
+.flaunch-link {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 600;
     font-size: 0.95rem;
+    transition: color 0.2s;
+}
+
+.flaunch-link:hover {
+    color: #5568d3;
+    text-decoration: underline;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.metric {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.metric label {
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.metric-value {
+    font-size: 1.3rem;
+    color: #333;
+    font-weight: 700;
+}
+
+.metric-value.contract-address {
+    font-family: 'Courier New', monospace;
+    font-size: 0.95rem;
+    color: #667eea;
+    word-break: break-all;
 }
 
 .api-links {
@@ -201,18 +259,96 @@ body {
 
 .price-chart {
     margin-bottom: 20px;
+    background: #f9fafb;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
 }
 
 .price-chart h3 {
-    margin: 0 0 16px 0;
+    margin: 0;
     color: #333;
     font-size: 1.2rem;
 }
 
-.chart-svg {
-    width: 100%;
-    height: auto;
-    max-width: 600px;
+.timeframe-selector {
+    display: flex;
+    gap: 8px;
+}
+
+.timeframe-selector button {
+    padding: 6px 12px;
+    border: 1px solid #e5e7eb;
+    background: white;
+    color: #666;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.timeframe-selector button:hover {
+    background: #f3f4f6;
+    border-color: #667eea;
+}
+
+.timeframe-selector button.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.chart-tooltip {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 8px 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.tooltip-time {
+    margin: 0 0 4px 0;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.tooltip-price {
+    margin: 0;
+    font-size: 1rem;
+    color: #333;
+}
+
+.chart-stats {
+    display: flex;
+    gap: 24px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+    flex-wrap: wrap;
+}
+
+.stat-item {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 600;
+}
+
+.stat-value {
+    font-size: 0.95rem;
+    color: #333;
+    font-weight: 700;
 }
 
 .no-chart-data {

@@ -724,6 +724,7 @@ def get_api_info(endpoint):
     token_address = api_config.get("token_address")
     
     if not token_address:
+        print("TOKEN NOT YET DEPLOYED")
         return jsonify({
             "error": "Token not yet deployed",
             "status": "launching",
@@ -732,6 +733,8 @@ def get_api_info(endpoint):
         }), 503
     
     try:
+        # Try to fetch price data - the API might support query parameters for more history
+        # Based on the meta.timeRanges field, we can see what ranges are available
         response = requests.get(
             f"{FLAUNCH_DATA_API}/{NETWORK}/tokens/{token_address}/price",
             timeout=10
@@ -746,20 +749,118 @@ def get_api_info(endpoint):
         
         full_data = response.json()
         
-        # Flaunch API returns prices in USD/USDC (field name "priceETH" is misleading)
-        # Approximate ETH price in USD (in production, fetch real-time rate)
-        eth_price_usd = 3000
+        # Check meta.timeRanges to see what data is available
+        meta = full_data.get("meta", {})
+        time_ranges = meta.get("timeRanges", {})
+        print(f"[DEBUG] Available time ranges: {time_ranges}")
         
-        price_usd = float(full_data.get("price", {}).get("priceETH", 0))
-        market_cap_usd = float(full_data.get("price", {}).get("marketCapETH", 0))
+        # Note: The Flaunch API appears to only return recent data by default
+        # There don't seem to be query parameters for date ranges in the documentation
+        # The API returns what it has available, which may be limited for newer tokens
+        
+        # Debug: Log price history structure
+        price_history_raw = full_data.get("priceHistory", {})
+        print(f"[DEBUG] Price history type: {type(price_history_raw)}")
+        print(f"[DEBUG] Price history keys: {list(price_history_raw.keys()) if isinstance(price_history_raw, dict) else 'Not a dict'}")
+        if isinstance(price_history_raw, dict):
+            for key in ["daily", "hourly", "minutely", "secondly"]:
+                data = price_history_raw.get(key, [])
+                print(f"[DEBUG] {key}: {len(data) if isinstance(data, list) else 'not a list'} items")
+                if isinstance(data, list) and len(data) > 0:
+                    print(f"[DEBUG] First {key} item sample: {data[0]}")
+        
+        # Flaunch API returns prices - extract from correct fields
+        # The API has priceUSDC in price history, and priceETH in main price object (but priceETH is misleading)
+        # Try to get current price from most recent price history point, or use price object fields
+        
+        # Get price from most recent hourly/daily data point (most reliable)
+        price_usd = 0
+        market_cap_usd = 0
+        volume_24h = 0
+        
+        # Try to get from most recent price history point
+        hourly_data = price_history_raw.get("hourly", [])
+        daily_data = price_history_raw.get("daily", [])
+        
+        if hourly_data and len(hourly_data) > 0:
+            latest_point = hourly_data[-1]
+            price_usd = float(latest_point.get("priceUSDC") or latest_point.get("closeUSDC") or 0)
+            # Sum up volumeUSDC from all hourly points for 24h volume
+            volume_24h = sum(float(p.get("volumeUSDC", 0)) for p in hourly_data)
+        elif daily_data and len(daily_data) > 0:
+            latest_point = daily_data[-1]
+            price_usd = float(latest_point.get("priceUSDC") or latest_point.get("closeUSDC") or 0)
+            # Use volumeUSDC from most recent daily point
+            volume_24h = float(latest_point.get("volumeUSDC", 0))
+        
+        # Fallback: try price object (but these fields might be in wrong units)
+        if price_usd == 0:
+            price_obj = full_data.get("price", {})
+            # Try priceETH - but it might need conversion
+            raw_price = float(price_obj.get("priceETH", 0))
+            if raw_price > 0 and raw_price < 1:  # If it's already a reasonable price
+                price_usd = raw_price
+            elif raw_price > 1e15:  # If it's in wei or smallest unit
+                price_usd = raw_price / 1e18
+            else:
+                price_usd = raw_price
+        
+        # Get market cap from main price object - marketCapETH is in USD/USDC (despite name)
+        price_obj = full_data.get("price", {})
+        print(f"[DEBUG] Price object keys: {list(price_obj.keys())}")
+        print(f"[DEBUG] marketCapETH raw: {price_obj.get('marketCapETH')}")
+        
+        market_cap_usd = float(price_obj.get("marketCapETH", 0))
+        
+        # If market cap is negative or zero, it might be in wrong units or need conversion
+        if market_cap_usd <= 0 or abs(market_cap_usd) > 1e20:
+            # Try converting if it's in smallest units
+            raw_mcap = float(price_obj.get("marketCapETH", 0))
+            if abs(raw_mcap) > 1e15:
+                market_cap_usd = abs(raw_mcap) / 1e18
+            # If still negative or zero, try to calculate from price
+            # Market cap = price * total supply (but we don't have supply, so skip)
+        
+        # Ensure market cap is positive
+        if market_cap_usd < 0:
+            market_cap_usd = abs(market_cap_usd)
+        
+        # If still no volume, try from main volume object (but it might be in wrong units)
+        if volume_24h == 0:
+            volume_obj = full_data.get("volume", {})
+            raw_volume = float(volume_obj.get("volume24h", 0))
+            # If volume is unreasonably large, it might be in smallest units
+            if raw_volume > 1e15:
+                volume_24h = raw_volume / 1e18
+            elif raw_volume > 0 and raw_volume < 1e10:  # Reasonable range
+                volume_24h = raw_volume
+        
+        # Get 7d volume
+        volume_7d = 0
+        if daily_data and len(daily_data) > 0:
+            # Sum volumeUSDC from all daily points
+            volume_7d = sum(float(p.get("volumeUSDC", 0)) for p in daily_data)
+        
+        if volume_7d == 0:
+            volume_obj = full_data.get("volume", {})
+            raw_volume_7d = float(volume_obj.get("volume7d", 0))
+            if raw_volume_7d > 1e15:
+                volume_7d = raw_volume_7d / 1e18
+            elif raw_volume_7d > 0 and raw_volume_7d < 1e10:
+                volume_7d = raw_volume_7d
+        
+        # All time high/low
         all_time_high_usd = float(full_data.get("price", {}).get("allTimeHigh", 0))
         all_time_low_usd = float(full_data.get("price", {}).get("allTimeLow", 0))
         
-        # Convert from USD to ETH for display purposes
+        # Convert to ETH if needed (for reference)
+        eth_price_usd = 3000  # Approximate
         price_eth = price_usd / eth_price_usd if eth_price_usd > 0 else 0
         market_cap_eth = market_cap_usd / eth_price_usd if eth_price_usd > 0 else 0
         all_time_high_eth = all_time_high_usd / eth_price_usd if eth_price_usd > 0 else 0
         all_time_low_eth = all_time_low_usd / eth_price_usd if eth_price_usd > 0 else 0
+        
+        print(f"[DEBUG] Extracted price_usd: {price_usd}, market_cap_usd: {market_cap_usd}, volume_24h: {volume_24h}")
         
         return jsonify({
             "api_name": api_config["name"],
@@ -785,8 +886,8 @@ def get_api_info(endpoint):
                 "all_time_low": all_time_low_eth
             },
             "volume": {
-                "volume_24h": float(full_data.get("volume", {}).get("volume24h", 0)),
-                "volume_7d": float(full_data.get("volume", {}).get("volume7d", 0))
+                "volume_24h": volume_24h,
+                "volume_7d": volume_7d
             },
             "price_history": {
                 "daily": full_data.get("priceHistory", {}).get("daily", []),

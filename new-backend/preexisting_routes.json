@@ -6,11 +6,11 @@
         "method": "GET",
         "wallet_address": "0x1234567890123456789012345678901234567890",
         "description": "Get weather data for any location",
-        "token_address": "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+        "token_address": "0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a",
         "symbol": "WEAAPI",
-        "token_uri": "https://flaunch.gg/token/0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+        "token_uri": "https://flaunch.gg/base/coin/0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a",
         "tx_hash": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-        "flaunch_link": "https://flaunch.gg/token/0xabcdefabcdefabcdefabcdefabcdefabcdefabcd"
+        "flaunch_link": "https://flaunch.gg/base/coin/0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a"
     },
     {
         "name": "Example Stock API",
@@ -19,10 +19,10 @@
         "method": "GET",
         "wallet_address": "0x9876543210987654321098765432109876543210",
         "description": "Get real-time stock prices",
-        "token_address": "0xfedcbafedcbafedcbafedcbafedcbafedcbafedc",
+        "token_address": "0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a",
         "symbol": "STOAPI",
-        "token_uri": "https://flaunch.gg/token/0xfedcbafedcbafedcbafedcbafedcbafedcbafedc",
+        "token_uri": "https://flaunch.gg/base/coin/0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a",
         "tx_hash": "0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321",
-        "flaunch_link": "https://flaunch.gg/token/0xfedcbafedcbafedcbafedcbafedcbafedcbafedc"
+        "flaunch_link": "https://flaunch.gg/base/coin/0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a"
     }
 ]
