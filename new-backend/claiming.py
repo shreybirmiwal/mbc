@@ -53,6 +53,10 @@ class FlaunchTokenStore:
         self.price_sync_thread = None
         self.payment_middleware = PaymentMiddleware(app)
         
+        # Price multiplier to transform tiny token prices into reasonable API prices
+        # Example: token price $0.000001 * 10000 = $0.01 API price
+        self.default_price_multiplier = 10000  # Adjustable per API
+        
         # Load pre-existing routes if file is provided
         if preexisting_routes_file is None:
             # Default to preexisting_routes.json in the same directory
@@ -109,19 +113,27 @@ class FlaunchTokenStore:
                     "preexisting": True  # Mark as pre-existing
                 }
                 
+                # Set price multiplier (can be customized per API)
+                price_multiplier = route.get("price_multiplier", self.default_price_multiplier)
+                api_config["price_multiplier"] = price_multiplier
+                
                 # Fetch initial price data for the token
                 price_data = self.get_token_price_data(route["token_address"])
                 if price_data:
                     api_config["price_data"] = price_data
-                    api_config["price_usd"] = price_data["price_usd"]
-                    api_config["price_eth"] = price_data["price_eth"]
-                    print(f"[INIT] Loaded {route['name']} ({endpoint}) - Price: ${price_data['price_usd']:.6f} USD ({price_data['price_eth']:.8f} ETH)")
+                    token_price = price_data["token_price_usd"]
+                    api_price = token_price * price_multiplier
+                    api_config["token_price_usd"] = token_price
+                    api_config["api_price_usd"] = api_price
+                    print(f"[INIT] Loaded {route['name']} ({endpoint})")
+                    print(f"       Token Price: ${token_price:.8f} USD | API Price: ${api_price:.6f} USD (x{price_multiplier})")
+                    print(f"       Market Cap: ${price_data['market_cap_usd']:.2f} USD | 24h Volume: ${price_data['volume_24h_usd']:.2f} USD")
                 else:
                     # Use default price if unavailable
-                    default_price_usd = route.get("price_usd", 0.01)
-                    api_config["price_usd"] = default_price_usd
-                    api_config["price_eth"] = default_price_usd / 3000  # Approximate conversion
-                    print(f"[INIT] Loaded {route['name']} ({endpoint}) - Price data unavailable, using default ${default_price_usd:.6f} USD")
+                    default_token_price = 0.000001
+                    api_config["token_price_usd"] = default_token_price
+                    api_config["api_price_usd"] = default_token_price * price_multiplier
+                    print(f"[INIT] Loaded {route['name']} ({endpoint}) - Price data unavailable, using defaults")
                 
                 self.apis[endpoint] = api_config
                 loaded_count += 1
@@ -140,13 +152,18 @@ class FlaunchTokenStore:
         
         SAFE_IMAGE_HASH = "QmX7UbPKJ7Drci3y6p6E8oi5TpUiG7NH3qSzcohPX9Xkvo"
         
+        # Use standard starting market cap (in USD)
+        # Lower market cap = more reasonable starting token price
+        # Default: $10,000 - gives starting price around $0.0001
+        starting_market_cap = api_config.get("starting_market_cap", "10000")
+        
         launch_data = {
             "name": f"{api_name} Token",
             "symbol": symbol,
             "description": f"Pay with {symbol} to access {api_name}. Token price = API access cost.",
             "imageIpfs": SAFE_IMAGE_HASH,
             "creatorAddress": api_config["wallet_address"],
-            "marketCap": "1000000",
+            "marketCap": starting_market_cap,  # Market cap in USD
             "creatorFeeSplit": "8000",
             "fairLaunchDuration": "0",
             "sniperProtection": True
@@ -195,7 +212,9 @@ class FlaunchTokenStore:
     
     def get_token_price_data(self, token_address: str) -> Optional[dict]:
         """Get real-time token price from Flaunch Data API
-        Note: Flaunch API returns prices in USD/USDC (field name "priceETH" is misleading)
+        
+        Extracts actual USD prices from Flaunch API response.
+        Returns token price in USD and API price (with multiplier applied).
         """
         try:
             response = requests.get(
@@ -205,30 +224,65 @@ class FlaunchTokenStore:
             
             if response.status_code == 200:
                 data = response.json()
-                # Flaunch API returns prices in USD/USDC (despite confusing field name "priceETH")
-                # Store USD prices directly for x402 middleware
-                eth_price_usd = 3000  # Approximate ETH price in USD
                 
-                price_usd = float(data.get("price", {}).get("priceETH", 0))
-                market_cap_usd = float(data.get("price", {}).get("marketCapETH", 0))
-                all_time_high_usd = float(data.get("price", {}).get("allTimeHigh", 0))
-                all_time_low_usd = float(data.get("price", {}).get("allTimeLow", 0))
+                # Method 1: Try to get from price history (most reliable - has priceUSDC)
+                price_history = data.get("priceHistory", {})
+                hourly_data = price_history.get("hourly", [])
+                daily_data = price_history.get("daily", [])
                 
-                # Convert from USD to ETH only for display purposes
-                price_eth = price_usd / eth_price_usd if eth_price_usd > 0 else 0
-                market_cap_eth = market_cap_usd / eth_price_usd if eth_price_usd > 0 else 0
-                all_time_high_eth = all_time_high_usd / eth_price_usd if eth_price_usd > 0 else 0
-                all_time_low_eth = all_time_low_usd / eth_price_usd if eth_price_usd > 0 else 0
+                token_price_usd = 0
+                volume_24h_usd = 0
+                
+                # Get most recent price from hourly data
+                if hourly_data and len(hourly_data) > 0:
+                    latest = hourly_data[-1]
+                    token_price_usd = float(latest.get("priceUSDC") or latest.get("closeUSDC") or 0)
+                    # Sum up 24h volume from hourly data
+                    volume_24h_usd = sum(float(p.get("volumeUSDC", 0)) for p in hourly_data[-24:])
+                elif daily_data and len(daily_data) > 0:
+                    latest = daily_data[-1]
+                    token_price_usd = float(latest.get("priceUSDC") or latest.get("closeUSDC") or 0)
+                    volume_24h_usd = float(latest.get("volumeUSDC", 0))
+                
+                # Method 2: Fallback to price object (but check for USDC fields first)
+                price_obj = data.get("price", {})
+                if token_price_usd == 0:
+                    # Try marketCapUSDC and derive price, or use priceETH as last resort
+                    token_price_usd = float(price_obj.get("priceUSDC", 0))
+                    if token_price_usd == 0:
+                        # Last resort: use priceETH but it might actually be in USD
+                        token_price_usd = float(price_obj.get("priceETH", 0))
+                
+                # Get market cap in USD (prefer marketCapUSDC)
+                market_cap_usd = float(price_obj.get("marketCapUSDC", 0))
+                if market_cap_usd == 0:
+                    market_cap_usd = abs(float(price_obj.get("marketCapETH", 0)))
+                
+                # Get volume (fallback to volume object if not from history)
+                if volume_24h_usd == 0:
+                    volume_obj = data.get("volume", {})
+                    volume_24h_usd = float(volume_obj.get("volume24hUSDC", 0))
+                    if volume_24h_usd == 0:
+                        volume_24h_usd = float(volume_obj.get("volume24h", 0))
+                
+                # All-time high/low
+                all_time_high_usd = float(price_obj.get("allTimeHigh", 0))
+                all_time_low_usd = float(price_obj.get("allTimeLow", 0))
+                
+                # Price change
+                price_change_24h = float(price_obj.get("priceChange24h", 0))
+                price_change_24h_pct = float(price_obj.get("priceChange24hPercentage", 0))
+                
+                print(f"[PRICE] Token: ${token_price_usd:.8f} USD, MCap: ${market_cap_usd:.2f}, Vol24h: ${volume_24h_usd:.2f}")
                 
                 return {
-                    "price_usd": price_usd,  # Store USD price directly
-                    "price_eth": price_eth,  # Also store ETH for display
+                    "token_price_usd": token_price_usd,  # Actual token price from Flaunch
                     "market_cap_usd": market_cap_usd,
-                    "market_cap_eth": market_cap_eth,
-                    "price_change_24h": float(data.get("price", {}).get("priceChange24h", 0)),
-                    "volume_24h": float(data.get("volume", {}).get("volume24h", 0)),
-                    "all_time_high": all_time_high_eth,
-                    "all_time_low": all_time_low_eth
+                    "volume_24h_usd": volume_24h_usd,
+                    "price_change_24h": price_change_24h,
+                    "price_change_24h_percentage": price_change_24h_pct,
+                    "all_time_high_usd": all_time_high_usd,
+                    "all_time_low_usd": all_time_low_usd
                 }
             return None
             
@@ -247,39 +301,51 @@ class FlaunchTokenStore:
                     price_data = self.get_token_price_data(token_address)
                     
                     if price_data:
-                        old_price = api_config.get("price_eth", 0)
-                        new_price = price_data["price_eth"]
+                        old_api_price = api_config.get("api_price_usd", 0)
                         
+                        # Get token price and calculate API price
+                        token_price = price_data["token_price_usd"]
+                        price_multiplier = api_config.get("price_multiplier", self.default_price_multiplier)
+                        new_api_price = token_price * price_multiplier
+                        
+                        # Update stored prices
                         api_config["price_data"] = price_data
-                        api_config["price_eth"] = new_price
+                        api_config["token_price_usd"] = token_price
+                        api_config["api_price_usd"] = new_api_price
                         
-                        # Update x402 middleware with new price
+                        # Update x402 middleware with new API price
                         self.update_x402_route(endpoint, api_config)
                         
-                        if old_price > 0:
-                            change = ((new_price - old_price) / old_price * 100)
-                            print(f"[PRICE] {api_config['symbol']}: {new_price:.8f} ETH ({change:+.2f}%)")
+                        if old_api_price > 0:
+                            change = ((new_api_price - old_api_price) / old_api_price * 100)
+                            print(f"[SYNC] {api_config['symbol']}: Token ${token_price:.8f} -> API ${new_api_price:.6f} ({change:+.2f}%)")
     
     def update_x402_route(self, endpoint: str, api_config: dict):
-        """Update or add x402 payment middleware for this route"""
+        """Update or add x402 payment middleware for this route
+        
+        Uses the transformed API price (token_price * multiplier), not raw token price.
+        """
         token_address = api_config.get("token_address")
         if not token_address:
             return
         
-        # Get USD price directly from price_data (Flaunch API returns prices in USD)
-        price_data = api_config.get("price_data", {})
-        price_usd = price_data.get("price_usd", 0)
+        # Get API price (transformed from token price)
+        api_price_usd = api_config.get("api_price_usd", 0)
+        token_price_usd = api_config.get("token_price_usd", 0)
+        price_multiplier = api_config.get("price_multiplier", self.default_price_multiplier)
         
-        if price_usd <= 0:
-            # Fallback to old method if price_data not available
-            price_eth = api_config.get("price_eth", 0.0001)
-            eth_to_usd = 3000
-            price_usd = price_eth * eth_to_usd
+        # If no API price set, calculate from token price
+        if api_price_usd <= 0:
+            if token_price_usd > 0:
+                api_price_usd = token_price_usd * price_multiplier
+            else:
+                api_price_usd = 0.001  # Fallback default
         
-        price_str = f"${price_usd:.6f}"
+        # Format price for x402 (USDC amount)
+        price_str = f"${api_price_usd:.6f}"
         
         # Add/update payment middleware for this route
-        # Note: x402 accepts USDC payment, amount is based on Flaunch token price in USD
+        # x402 accepts USDC payment at the transformed API price
         self.payment_middleware.add(
             path=endpoint,
             price=price_str,
@@ -287,8 +353,9 @@ class FlaunchTokenStore:
             network="base-sepolia" if NETWORK == "base-sepolia" else "base"
         )
         
-        price_eth_display = price_data.get("price_eth", price_usd / 3000)
-        print(f"[x402] Updated payment route: {endpoint} -> {price_str} (based on ${price_usd:.2f} price of {api_config.get('symbol', 'token')})")
+        symbol = api_config.get('symbol', 'token')
+        print(f"[x402] Updated: {endpoint} -> {price_str}")
+        print(f"       Token: ${token_price_usd:.8f} x {price_multiplier} = API Price: ${api_price_usd:.6f}")
     
     def finalize_token_launch(self, endpoint: str):
         if endpoint not in self.apis:
@@ -315,16 +382,28 @@ class FlaunchTokenStore:
                 api_config["token_uri"] = token_info.get("tokenURI")
                 api_config["tx_hash"] = status.get("transactionHash")
                 
-                # Fetch initial price
+                # Ensure price multiplier is set
+                if "price_multiplier" not in api_config:
+                    api_config["price_multiplier"] = self.default_price_multiplier
+                
+                # Fetch initial price and calculate API price
                 price_data = self.get_token_price_data(token_address)
                 if price_data:
                     api_config["price_data"] = price_data
-                    api_config["price_eth"] = price_data["price_eth"]
+                    token_price = price_data["token_price_usd"]
+                    api_price = token_price * api_config["price_multiplier"]
+                    api_config["token_price_usd"] = token_price
+                    api_config["api_price_usd"] = api_price
+                    print(f"[FLAUNCH] ✓ Token deployed at {token_address}")
+                    print(f"          Token: ${token_price:.8f} | API: ${api_price:.6f}")
+                else:
+                    # Set defaults if price fetch fails
+                    api_config["token_price_usd"] = 0.000001
+                    api_config["api_price_usd"] = 0.000001 * api_config["price_multiplier"]
+                    print(f"[FLAUNCH] ✓ Token deployed at {token_address} (price data pending)")
                 
                 # Register with x402
                 self.update_x402_route(endpoint, api_config)
-                
-                print(f"[FLAUNCH] ✓ Token deployed at {token_address}")
                 print(f"[x402] ✓ Payment route registered")
                 return True
             
@@ -445,6 +524,8 @@ def create_api():
         "description": data.get("description", ""),
         "input_format": data.get("input_format", {}),
         "output_format": data.get("output_format", {}),
+        "price_multiplier": data.get("price_multiplier", store.default_price_multiplier),
+        "starting_market_cap": data.get("starting_market_cap", "10000"),  # USD
         "created_at": time.time()
     }
     
@@ -481,7 +562,7 @@ def create_api():
     if not deployed:
         print("[FLAUNCH] ⚠ Deployment pending or taking longer than expected.")
 
-    return jsonify({
+    response_data = {
         "success": True,
         "api": {
             "name": data["name"],
@@ -494,12 +575,24 @@ def create_api():
             "launch_status": "deployed" if deployed else "pending",
             "job_id": api_config["job_id"],
             "token_address": api_config.get("token_address"),
+            "price_multiplier": api_config.get("price_multiplier"),
+            "starting_market_cap": api_config.get("starting_market_cap"),
             "check_status": f"GET /admin/api-status{endpoint}",
             "view_schema": f"GET /admin/api-schema{endpoint}",
             "x402_enabled": deployed
         },
         "message": "Token launched and x402 payment enabled!" if deployed else "Token launch initiated."
-    }), 201
+    }
+    
+    # Add pricing info if deployed
+    if deployed:
+        response_data["pricing"] = {
+            "token_price_usd": api_config.get("token_price_usd"),
+            "api_price_usd": api_config.get("api_price_usd"),
+            "transform": f"Token Price x {api_config.get('price_multiplier')} = API Price"
+        }
+    
+    return jsonify(response_data), 201
 
 
 @app.route("/admin/api-status/<path:endpoint>", methods=["GET"])
@@ -530,19 +623,29 @@ def api_status(endpoint):
     }
     
     if token_address:
+        price_multiplier = api_config.get("price_multiplier", store.default_price_multiplier)
+        token_price = api_config.get("token_price_usd", 0)
+        api_price = api_config.get("api_price_usd", 0)
+        
         response["token"] = {
             "address": token_address,
             "symbol": api_config.get("symbol"),
-            "price_eth": api_config.get("price_eth"),
-            "price_data": api_config.get("price_data"),
             "view_on_flaunch": f"https://flaunch.gg/base/coin/{token_address}",
             "tx_hash": api_config.get("tx_hash")
         }
+        response["pricing"] = {
+            "token_price_usd": token_price,
+            "api_price_usd": api_price,
+            "price_multiplier": price_multiplier,
+            "transform_explanation": f"API users pay ${api_price:.6f} (token price ${token_price:.8f} x {price_multiplier})",
+            "price_data": api_config.get("price_data")
+        }
         response["payment_info"] = {
             "protocol": "x402",
-            "accepts": api_config.get("symbol"),
+            "currency": "USDC",
+            "amount_per_call": f"${api_price:.6f}",
             "chain": "base" if NETWORK == "base" else "base-sepolia",
-            "price_updates": "Real-time from Flaunch DEX"
+            "price_updates": "Real-time from Flaunch DEX (with multiplier transform)"
         }
     else:
         response["token"] = {
@@ -671,8 +774,12 @@ def list_apis():
             info["token"] = {
                 "address": token_address,
                 "symbol": api_config.get("symbol"),
-                "price_eth": api_config.get("price_eth"),
                 "view_on_flaunch": f"https://flaunch.gg/base/coin/{token_address}"
+            }
+            info["pricing"] = {
+                "token_price_usd": api_config.get("token_price_usd"),
+                "api_price_usd": api_config.get("api_price_usd"),
+                "price_multiplier": api_config.get("price_multiplier")
             }
         
         apis_info.append(info)
@@ -705,16 +812,22 @@ def health():
         "how_it_works": {
             "1": "POST to /admin/create-api with your existing API endpoint",
             "2": "Server launches a real token on Flaunch for that API",
-            "3": "x402 protocol enforces payments using the token",
-            "4": "Token price from Flaunch = API access cost (updates in real-time)",
-            "5": "Users pay with tokens via x402 standard to access your API"
+            "3": "Token price from Flaunch is transformed (multiplied) to create API price",
+            "4": "x402 protocol enforces USDC payments at the transformed API price",
+            "5": "API price updates in real-time as token trades on Flaunch"
+        },
+        "pricing_system": {
+            "token_price": "Actual market price from Flaunch DEX (usually tiny, e.g. $0.000001)",
+            "price_multiplier": f"Default {store.default_price_multiplier}x (customizable per API)",
+            "api_price": "Token price × multiplier = reasonable API cost ($0.0001 - $0.01)",
+            "example": f"Token $0.000001 × {store.default_price_multiplier} = API $0.01 per call"
         }
     })
 
 
 @app.route("/admin/api-info/<path:endpoint>", methods=["GET"])
 def get_api_info(endpoint):
-    """Get comprehensive API information including price history"""
+    """Get comprehensive API information including price history and market data"""
     endpoint = "/" + endpoint
     
     if endpoint not in store.apis:
@@ -733,8 +846,7 @@ def get_api_info(endpoint):
         }), 503
     
     try:
-        # Try to fetch price data - the API might support query parameters for more history
-        # Based on the meta.timeRanges field, we can see what ranges are available
+        # Fetch fresh price data and history from Flaunch
         response = requests.get(
             f"{FLAUNCH_DATA_API}/{NETWORK}/tokens/{token_address}/price",
             timeout=10
@@ -742,132 +854,32 @@ def get_api_info(endpoint):
         
         if response.status_code != 200:
             return jsonify({
-                "error": "Unable to fetch price history",
+                "error": "Unable to fetch price data from Flaunch",
                 "api_name": api_config["name"],
                 "token_address": token_address
             }), 500
         
         full_data = response.json()
         
-        # Check meta.timeRanges to see what data is available
-        meta = full_data.get("meta", {})
-        time_ranges = meta.get("timeRanges", {})
-        print(f"[DEBUG] Available time ranges: {time_ranges}")
+        # Parse using our improved get_token_price_data logic
+        price_data = store.get_token_price_data(token_address)
         
-        # Note: The Flaunch API appears to only return recent data by default
-        # There don't seem to be query parameters for date ranges in the documentation
-        # The API returns what it has available, which may be limited for newer tokens
+        if not price_data:
+            return jsonify({
+                "error": "Unable to parse price data",
+                "api_name": api_config["name"],
+                "token_address": token_address
+            }), 500
         
-        # Debug: Log price history structure
+        # Calculate API price from token price
+        token_price_usd = price_data["token_price_usd"]
+        price_multiplier = api_config.get("price_multiplier", store.default_price_multiplier)
+        api_price_usd = token_price_usd * price_multiplier
+        
+        # Get volume data
         price_history_raw = full_data.get("priceHistory", {})
-        print(f"[DEBUG] Price history type: {type(price_history_raw)}")
-        print(f"[DEBUG] Price history keys: {list(price_history_raw.keys()) if isinstance(price_history_raw, dict) else 'Not a dict'}")
-        if isinstance(price_history_raw, dict):
-            for key in ["daily", "hourly", "minutely", "secondly"]:
-                data = price_history_raw.get(key, [])
-                print(f"[DEBUG] {key}: {len(data) if isinstance(data, list) else 'not a list'} items")
-                if isinstance(data, list) and len(data) > 0:
-                    print(f"[DEBUG] First {key} item sample: {data[0]}")
-        
-        # Flaunch API returns prices - extract from correct fields
-        # The API has priceUSDC in price history, and priceETH in main price object (but priceETH is misleading)
-        # Try to get current price from most recent price history point, or use price object fields
-        
-        # Get price from most recent hourly/daily data point (most reliable)
-        price_usd = 0
-        market_cap_usd = 0
-        volume_24h = 0
-        
-        # Try to get from most recent price history point
-        hourly_data = price_history_raw.get("hourly", [])
         daily_data = price_history_raw.get("daily", [])
-        
-        if hourly_data and len(hourly_data) > 0:
-            latest_point = hourly_data[-1]
-            price_usd = float(latest_point.get("priceUSDC") or latest_point.get("closeUSDC") or 0)
-            # Sum up volumeUSDC from all hourly points for 24h volume
-            volume_24h = sum(float(p.get("volumeUSDC", 0)) for p in hourly_data)
-        elif daily_data and len(daily_data) > 0:
-            latest_point = daily_data[-1]
-            price_usd = float(latest_point.get("priceUSDC") or latest_point.get("closeUSDC") or 0)
-            # Use volumeUSDC from most recent daily point
-            volume_24h = float(latest_point.get("volumeUSDC", 0))
-        
-        # Fallback: try price object (but these fields might be in wrong units)
-        if price_usd == 0:
-            price_obj = full_data.get("price", {})
-            # Try priceETH - but it might need conversion
-            raw_price = float(price_obj.get("priceETH", 0))
-            if raw_price > 0 and raw_price < 1:  # If it's already a reasonable price
-                price_usd = raw_price
-            elif raw_price > 1e15:  # If it's in wei or smallest unit
-                price_usd = raw_price / 1e18
-            else:
-                price_usd = raw_price
-        
-        # Get market cap from main price object - use marketCapUSDC (in USD) instead of marketCapETH
-        price_obj = full_data.get("price", {})
-        print(f"[DEBUG] Price object keys: {list(price_obj.keys())}")
-        print(f"[DEBUG] marketCapUSDC raw: {price_obj.get('marketCapUSDC')}")
-        print(f"[DEBUG] marketCapETH raw: {price_obj.get('marketCapETH')}")
-        
-        # Use marketCapUSDC first (it's in USD/USDC) - this is the correct field
-        market_cap_usd = float(price_obj.get("marketCapUSDC", 0))
-        
-        # If marketCapUSDC is not available or invalid, try marketCapETH as fallback
-        if market_cap_usd <= 0:
-            raw_mcap_eth = float(price_obj.get("marketCapETH", 0))
-            # If it's negative, take absolute value
-            if raw_mcap_eth < 0:
-                raw_mcap_eth = abs(raw_mcap_eth)
-            # marketCapETH might be in smallest units or need conversion
-            # But since it's often wrong, prefer marketCapUSDC
-            if raw_mcap_eth > 1e15:
-                # Try converting from smallest units
-                market_cap_usd = raw_mcap_eth / 1e18
-            elif raw_mcap_eth > 0 and raw_mcap_eth < 1e15:
-                market_cap_usd = raw_mcap_eth
-        
-        # Ensure market cap is positive
-        if market_cap_usd < 0:
-            market_cap_usd = abs(market_cap_usd)
-        
-        # If still no volume, try from main volume object (but it might be in wrong units)
-        if volume_24h == 0:
-            volume_obj = full_data.get("volume", {})
-            raw_volume = float(volume_obj.get("volume24h", 0))
-            # If volume is unreasonably large, it might be in smallest units
-            if raw_volume > 1e15:
-                volume_24h = raw_volume / 1e18
-            elif raw_volume > 0 and raw_volume < 1e10:  # Reasonable range
-                volume_24h = raw_volume
-        
-        # Get 7d volume
-        volume_7d = 0
-        if daily_data and len(daily_data) > 0:
-            # Sum volumeUSDC from all daily points
-            volume_7d = sum(float(p.get("volumeUSDC", 0)) for p in daily_data)
-        
-        if volume_7d == 0:
-            volume_obj = full_data.get("volume", {})
-            raw_volume_7d = float(volume_obj.get("volume7d", 0))
-            if raw_volume_7d > 1e15:
-                volume_7d = raw_volume_7d / 1e18
-            elif raw_volume_7d > 0 and raw_volume_7d < 1e10:
-                volume_7d = raw_volume_7d
-        
-        # All time high/low
-        all_time_high_usd = float(full_data.get("price", {}).get("allTimeHigh", 0))
-        all_time_low_usd = float(full_data.get("price", {}).get("allTimeLow", 0))
-        
-        # Convert to ETH if needed (for reference)
-        eth_price_usd = 3000  # Approximate
-        price_eth = price_usd / eth_price_usd if eth_price_usd > 0 else 0
-        market_cap_eth = market_cap_usd / eth_price_usd if eth_price_usd > 0 else 0
-        all_time_high_eth = all_time_high_usd / eth_price_usd if eth_price_usd > 0 else 0
-        all_time_low_eth = all_time_low_usd / eth_price_usd if eth_price_usd > 0 else 0
-        
-        print(f"[DEBUG] Extracted price_usd: {price_usd}, market_cap_usd: {market_cap_usd}, volume_24h: {volume_24h}")
+        volume_7d_usd = sum(float(p.get("volumeUSDC", 0)) for p in daily_data) if daily_data else 0
         
         return jsonify({
             "api_name": api_config["name"],
@@ -882,26 +894,36 @@ def get_api_info(endpoint):
             "schema_endpoint": f"/admin/api-schema{endpoint}",
             "payment_protocol": "x402",
             "x402_enabled": True,
-            "current_price": {
-                "price_usd": price_usd,  # Primary price in USD (what x402 uses)
-                "price_eth": price_eth,  # Also show in ETH for reference
-                "market_cap_usd": market_cap_usd,
-                "market_cap_eth": market_cap_eth,
-                "price_change_24h": float(full_data.get("price", {}).get("priceChange24h", 0)),
-                "price_change_24h_percentage": float(full_data.get("price", {}).get("priceChange24hPercentage", 0)),
-                "all_time_high": all_time_high_eth,
-                "all_time_low": all_time_low_eth
+            
+            # Pricing Information - clearly separated
+            "pricing": {
+                "token_price_usd": token_price_usd,
+                "api_price_usd": api_price_usd,
+                "price_multiplier": price_multiplier,
+                "transform_explanation": f"Token ${token_price_usd:.8f} USD x {price_multiplier} = API ${api_price_usd:.6f} USD per call"
             },
-            "volume": {
-                "volume_24h": volume_24h,
-                "volume_7d": volume_7d
+            
+            # Market Data from Flaunch
+            "market_data": {
+                "market_cap_usd": price_data["market_cap_usd"],
+                "volume_24h_usd": price_data["volume_24h_usd"],
+                "volume_7d_usd": volume_7d_usd,
+                "price_change_24h": price_data["price_change_24h"],
+                "price_change_24h_percentage": price_data["price_change_24h_percentage"],
+                "all_time_high_usd": price_data["all_time_high_usd"],
+                "all_time_low_usd": price_data["all_time_low_usd"]
             },
+            
+            # Price History (raw from Flaunch)
             "price_history": {
+                "note": "All prices in priceUSDC/closeUSDC fields are USD prices",
                 "daily": full_data.get("priceHistory", {}).get("daily", []),
                 "hourly": full_data.get("priceHistory", {}).get("hourly", []),
                 "minutely": full_data.get("priceHistory", {}).get("minutely", []),
                 "secondly": full_data.get("priceHistory", {}).get("secondly", [])
             },
+            
+            # Links
             "links": {
                 "flaunch": f"https://flaunch.gg/base/coin/{token_address}",
                 "api_status": f"/admin/api-status{endpoint}"
@@ -909,8 +931,11 @@ def get_api_info(endpoint):
         })
         
     except Exception as e:
+        import traceback
+        print(f"[ERROR] get_api_info exception: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({
-            "error": f"Error fetching price history: {str(e)}",
+            "error": f"Error fetching price data: {str(e)}",
             "api_name": api_config["name"],
             "token_address": token_address
         }), 500
