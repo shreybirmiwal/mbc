@@ -811,19 +811,21 @@ def get_api_info(endpoint):
         print(f"[DEBUG] marketCapUSDC raw: {price_obj.get('marketCapUSDC')}")
         print(f"[DEBUG] marketCapETH raw: {price_obj.get('marketCapETH')}")
         
-        # Use marketCapUSDC first (it's in USD/USDC)
+        # Use marketCapUSDC first (it's in USD/USDC) - this is the correct field
         market_cap_usd = float(price_obj.get("marketCapUSDC", 0))
         
-        # If marketCapUSDC is not available or invalid, try marketCapETH
+        # If marketCapUSDC is not available or invalid, try marketCapETH as fallback
         if market_cap_usd <= 0:
             raw_mcap_eth = float(price_obj.get("marketCapETH", 0))
             # If it's negative, take absolute value
             if raw_mcap_eth < 0:
                 raw_mcap_eth = abs(raw_mcap_eth)
-            # If it's very large, it might be in smallest units, convert
+            # marketCapETH might be in smallest units or need conversion
+            # But since it's often wrong, prefer marketCapUSDC
             if raw_mcap_eth > 1e15:
+                # Try converting from smallest units
                 market_cap_usd = raw_mcap_eth / 1e18
-            elif raw_mcap_eth > 0:
+            elif raw_mcap_eth > 0 and raw_mcap_eth < 1e15:
                 market_cap_usd = raw_mcap_eth
         
         # Ensure market cap is positive
