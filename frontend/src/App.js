@@ -5,19 +5,19 @@ const API_BASE_URL = 'http://127.0.0.1:5000';
 const DEFAULT_PRICE_MULTIPLIER = 10000;
 const DEFAULT_STARTING_MARKET_CAP = '1000000';
 
-// Spinning 3D ASCII Globe Component
+// Spinning 3D Earth Globe Component
 function AsciiGlobe() {
   const [frame, setFrame] = useState(0);
   const animationRef = useRef();
 
   useEffect(() => {
     let lastTime = 0;
-    const targetFPS = 15; // Smooth but not too fast
+    const targetFPS = 20;
     const frameInterval = 1000 / targetFPS;
     
     const animate = (currentTime) => {
       if (currentTime - lastTime >= frameInterval) {
-        setFrame(prev => (prev + 1) % 360);
+        setFrame(prev => (prev + 2) % 360);
         lastTime = currentTime;
       }
       animationRef.current = requestAnimationFrame(animate);
@@ -27,53 +27,69 @@ function AsciiGlobe() {
   }, []);
 
   const renderGlobe = () => {
-    const width = 40;
-    const height = 20;
-    const R1 = 1;
-    const R2 = 2;
-    const K2 = 5;
-    const K1 = width * K2 * 3 / (8 * (R1 + R2));
+    const width = 30;
+    const height = 15;
+    const radius = 6;
     
-    const A = frame * Math.PI / 180;
-    const B = frame * 0.5 * Math.PI / 180;
-    
-    const cosA = Math.cos(A);
-    const sinA = Math.sin(A);
-    const cosB = Math.cos(B);
-    const sinB = Math.sin(B);
+    const angleX = frame * Math.PI / 180;
+    const angleY = frame * 0.3 * Math.PI / 180;
     
     const output = Array(height).fill(null).map(() => Array(width).fill(' '));
-    const zbuffer = Array(height).fill(null).map(() => Array(width).fill(0));
+    const zbuffer = Array(height).fill(null).map(() => Array(width).fill(-Infinity));
     
-    // Render the sphere
-    for (let theta = 0; theta < 2 * Math.PI; theta += 0.07) {
-      const costheta = Math.cos(theta);
-      const sintheta = Math.sin(theta);
-      
-      for (let phi = 0; phi < 2 * Math.PI; phi += 0.02) {
-        const cosphi = Math.cos(phi);
-        const sinphi = Math.sin(phi);
+    // Draw sphere
+    for (let i = 0; i < height; i++) {
+      for (let j = 0; j < width; j++) {
+        const x = (j - width / 2) / 2;
+        const y = (i - height / 2);
+        const z2 = radius * radius - x * x - y * y;
         
-        const circlex = R2 + R1 * costheta;
-        const circley = R1 * sintheta;
-        
-        const x = circlex * (cosB * cosphi + sinA * sinB * sinphi) - circley * cosA * sinB;
-        const y = circlex * (sinB * cosphi - sinA * cosB * sinphi) + circley * cosA * cosB;
-        const z = K2 + cosA * circlex * sinphi + circley * sinA;
-        const ooz = 1 / z;
-        
-        const xp = Math.floor(width / 2 + K1 * ooz * x);
-        const yp = Math.floor(height / 2 - K1 * ooz * y);
-        
-        // Bounds checking
-        if (xp >= 0 && xp < width && yp >= 0 && yp < height) {
-          const L = cosphi * costheta * sinB - cosA * costheta * sinphi - sinA * sintheta + cosB * (cosA * sintheta - costheta * sinA * sinphi);
+        if (z2 >= 0) {
+          const z = Math.sqrt(z2);
           
-          if (L > 0 && ooz > zbuffer[yp][xp]) {
-            zbuffer[yp][xp] = ooz;
-            const luminance_index = Math.floor(L * 8);
-            const chars = '.,-~:;=!*#$@';
-            output[yp][xp] = chars[luminance_index >= chars.length ? chars.length - 1 : luminance_index];
+          // Rotate
+          const rx = x;
+          const ry = y * Math.cos(angleY) - z * Math.sin(angleY);
+          const rz = y * Math.sin(angleY) + z * Math.cos(angleY);
+          
+          const rrx = rx * Math.cos(angleX) + rz * Math.sin(angleX);
+          const rrz = -rx * Math.sin(angleX) + rz * Math.cos(angleX);
+          
+          // Simple continents pattern (rough Earth-like)
+          const lat = Math.asin(ry / radius);
+          const lon = Math.atan2(rrx, rrz);
+          
+          // Create landmasses pattern
+          const pattern = Math.sin(lat * 3) * Math.cos(lon * 4) + 
+                         Math.sin(lat * 5) * Math.sin(lon * 2) +
+                         Math.cos(lat * 2) * Math.sin(lon * 3);
+          
+          // Lighting
+          const nx = rrx / radius;
+          const ny = ry / radius;
+          const nz = rrz / radius;
+          const light = Math.max(0, nx * 0.7 + ny * 0.3 + nz * 0.6);
+          
+          const isLand = pattern > 0.3;
+          let char;
+          
+          if (isLand) {
+            // Land with shading
+            if (light > 0.7) char = '#';
+            else if (light > 0.5) char = '%';
+            else if (light > 0.3) char = '*';
+            else char = '+';
+          } else {
+            // Ocean with shading
+            if (light > 0.7) char = '~';
+            else if (light > 0.5) char = '-';
+            else if (light > 0.3) char = '=';
+            else char = '.';
+          }
+          
+          if (rrz > zbuffer[i][j]) {
+            zbuffer[i][j] = rrz;
+            output[i][j] = char;
           }
         }
       }
@@ -177,11 +193,59 @@ function App() {
   return (
     <div className="app">
       <header className="main-header">
+        <div className="ascii-art-banner">
+          <pre className="ascii-banner-text">
+{`                    %######*****************************************                                                     
+                    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##################*********                                    
+                     %%*+=-=#%%%#+----+%%%%#----=%%%%%+-===*#%%%#%%%%%%%#%#%#%####%%%%%#####******                       
+                     %*----*%%%%#=----#%%%%*----+%%%%%=----+%%%#=---*%%%*----+%%%%%#%%%%%%%%%%%%%%%%%###**               
+                    %#=---+#%%%%+----=%%%%%=----+%%%%#=----+%%%#=---*%%%*----=%%%%#-----#%%%*-==++#%%%%%%%%%             
+                  #%#=---=#%%%%#-----#%%%%#-----*%%%%#=----*%%%%=---*%%%*=---=%%%%%-----*%%%*-----+%%%%#=-*# ...         
+                 %%#=---=#%%%%%=----+%%%%%+----=#%%%%#=---=*%%%%+---*%%%#=---=#%%%%=----+%%%#=----=#%%%%+-=*..           
+                #%#=---=#%%%%%+=====#%%%%#=-===+%%%%%*=====#%%%%+===*%%%%+====#%%%%+-=--=%%%%+=---=#%%%%*=-+#            
+              #%%*=====#%%%%%*=====*%##%%+=====*%%%%%*====+#%%%%+===*%%%%+====*%%%%#=====*%%%%=====+%%##%+-=+%%          
+            %%%#=====+%%%%%%*=====+###%##+=====######=====+#####+===+####+====+####%+=====#%%%#=====*%#%%%+===#%%%       
+         ##%%%*=====+%%%###*======+***##*+===+*%#####+++++*%####*+++*####*+++++#####*+++++#####++++++#####%+====*%%%#%   
+     %##%%##*======+########++++++*#####%++++++%#####+++++*%#####+=+*###%*+===+%###%*+===+#####++==+*######+++++++#######
+   %#########+++++++########*+====+%####%*+===+#####%*====+%%%%%*===*%%%%*===+*###%%+====+##%%+====+#%#%%#+==+==+#%#%%%%%
+   %########%*++=+++*%#######+====+#%###%#+====#%%%%%*==++*%%%%%%##%#+++++++++++++#%*++++++*%%*+++++++++++++++++*#%#%%%# 
+    ##########+=====+#%%%%%%%+=====*%%####+==+*%%%%%%%%%%%%%%%%%%%%#++++**+*******%%%+++*#+----+*++++++++++++++++        
+    ##%######%#+=====*######%*====++#%*+++++*%%%%%%%%%%%%%%%%%%%#                 %%%  .#--+##++-#        +*+++++        
+      %%%%%%%%%+=====++++++*%%*++* #%%%   %%%%%%%%%%%%%%%%%%%%                    %%%.  #:+*%%#+-+                       
+      #%%%%%#*++++++++=: ..#%#%    %%%%%%%%%%%%%%%%%%%%%%%%%                      %%#. .++-=+++-=#                       
+           +++      .......#%#%     %%%%%%%%%%%%%%%%%%%                           %%%....-*++++%#                        
+                      ..   %%#%    #%%%%##%#%####                                 %%%  ..  %%%%                          
+                           %%#%    %%%%%##                                        %%%    =-------==                      
+              ...          %%##   #%%%%%%%#                                    ...%%%   --:::::::::-=                    
+           ...             %%#%   %%%%%%%%#                                 ...   %%% --::-=-::-=-::--                   
+         . ...             %%#%  #%%%%%%%%%                               . ...   %%% -::-=:-------::-                   
+       .  .                %%#% #%%%%%%%%%%#                               .      %%% -::----------::-                   
+      .                    %%#% %%%%%%%%%%%                            .          %%% --::=-:----=-:--                   
+     . .                   %%#%#%%%%%%%                               .  .        %%%  =-::------::--                    
+  .  .                     %%##%%%%%%%#                            .  .           %%%   =--::::::--=                     
+....                       %%%%%%%%%%%#                          ....             %%%      ###+==                        
+.  .                        %%%%#======-                         .  .              %%%      ##*+===                       
+                           %%#%========                   =                       %%%   ==============                   
+                           %%#%========                  ====                     %%% ====++======++===                  
+                           %%%===========          #%%## ====-:::             -===*%%===+===--::--==++===                
+    ---=====----           %*==---========****===-*#%%%%*+==+-::-*************=----**=====-:-====-:======                
+   -------------           +===--=========+**+=--=%%%%%%%#*++****++***#%%#*#*=-----====+==:-======--======               
+   -------------           *+=---=========*+=----%%#%%%%%%#+++++++**#%*%%*+==---------=+==:-======--==+===               
+-----  ----------------=- =----  %#============*+:::---%%%%%%%%%#+++++++++==---::::-----:::::::--:-===-:-==+===                
+-----------------------------------+%%+========+#-:::::--*%%%%%%%%=====++=++=-----===--:::::::::::-------===+===                 
+--  =============------========= ---#%%*======+#%+::::--==%%%%%%%*++=+++++=++=====+++==--::::::::--=++=+++=====                  
+---+=======================-::::-::::+**++===+***+-::-===+*%%%%%#*++++++++++*+++++++*++===-:::::-============         .          
+-----====--------======-:::::::::::::--=++++++++++++++++********************************************************##   ...         
+ ----------------------:::::::::::::::::=#########################################################################=...           
+     ------------------::::::::-::-::::-=#########################################################################+..            
+       +=======-=======-::::---::::---::+#########################################################################=              
+          ++============---::::::::::--=##########################################################################               
+               +======   :::-:::::::::     . ..                                                             .  .`}
+          </pre>
+        </div>
         <div className="header-content">
-          <div className="header-left">
-            <AsciiGlobe />
-          </div>
-          <div className="header-right">
+          <AsciiGlobe />
+          <div className="header-text">
             <h1>BAZAAR // MARKETPLACE</h1>
             <div className="system-status">
               <span>STATUS: ONLINE</span>
