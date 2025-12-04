@@ -131,10 +131,69 @@ h3 {
 
 /* --- Header --- */
 .main-header {
-    text-align: center;
     border-bottom: 1px solid var(--terminal-green);
     margin-bottom: 1rem;
     padding-bottom: 0.75rem;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-right {
+    text-align: center;
+    flex: 1;
+    min-width: 300px;
+}
+
+.ascii-globe {
+    font-family: 'Courier New', monospace;
+    font-size: 7px;
+    line-height: 0.9;
+    color: var(--terminal-green);
+    text-shadow: 
+        0 0 5px rgba(0, 255, 65, 0.8),
+        0 0 10px rgba(0, 255, 65, 0.4),
+        0 0 15px rgba(0, 255, 65, 0.2);
+    margin: 0;
+    padding: 5px;
+    white-space: pre;
+    letter-spacing: 0;
+    animation: globe-pulse 4s ease-in-out infinite;
+    user-select: none;
+    filter: contrast(1.1);
+}
+
+@keyframes globe-pulse {
+    0%, 100% {
+        opacity: 0.85;
+        filter: brightness(1) contrast(1.1);
+    }
+    50% {
+        opacity: 1;
+        filter: brightness(1.15) contrast(1.2);
+    }
+}
+
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .ascii-globe {
+        font-size: 6px;
+    }
 }
 
 .system-status {

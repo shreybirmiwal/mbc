@@ -1,9 +1,93 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 
 const API_BASE_URL = 'http://127.0.0.1:5000';
 const DEFAULT_PRICE_MULTIPLIER = 10000;
 const DEFAULT_STARTING_MARKET_CAP = '1000000';
+
+// Spinning 3D ASCII Globe Component
+function AsciiGlobe() {
+  const [frame, setFrame] = useState(0);
+  const animationRef = useRef();
+
+  useEffect(() => {
+    let lastTime = 0;
+    const targetFPS = 15; // Smooth but not too fast
+    const frameInterval = 1000 / targetFPS;
+    
+    const animate = (currentTime) => {
+      if (currentTime - lastTime >= frameInterval) {
+        setFrame(prev => (prev + 1) % 360);
+        lastTime = currentTime;
+      }
+      animationRef.current = requestAnimationFrame(animate);
+    };
+    animationRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationRef.current);
+  }, []);
+
+  const renderGlobe = () => {
+    const width = 40;
+    const height = 20;
+    const R1 = 1;
+    const R2 = 2;
+    const K2 = 5;
+    const K1 = width * K2 * 3 / (8 * (R1 + R2));
+    
+    const A = frame * Math.PI / 180;
+    const B = frame * 0.5 * Math.PI / 180;
+    
+    const cosA = Math.cos(A);
+    const sinA = Math.sin(A);
+    const cosB = Math.cos(B);
+    const sinB = Math.sin(B);
+    
+    const output = Array(height).fill(null).map(() => Array(width).fill(' '));
+    const zbuffer = Array(height).fill(null).map(() => Array(width).fill(0));
+    
+    // Render the sphere
+    for (let theta = 0; theta < 2 * Math.PI; theta += 0.07) {
+      const costheta = Math.cos(theta);
+      const sintheta = Math.sin(theta);
+      
+      for (let phi = 0; phi < 2 * Math.PI; phi += 0.02) {
+        const cosphi = Math.cos(phi);
+        const sinphi = Math.sin(phi);
+        
+        const circlex = R2 + R1 * costheta;
+        const circley = R1 * sintheta;
+        
+        const x = circlex * (cosB * cosphi + sinA * sinB * sinphi) - circley * cosA * sinB;
+        const y = circlex * (sinB * cosphi - sinA * cosB * sinphi) + circley * cosA * cosB;
+        const z = K2 + cosA * circlex * sinphi + circley * sinA;
+        const ooz = 1 / z;
+        
+        const xp = Math.floor(width / 2 + K1 * ooz * x);
+        const yp = Math.floor(height / 2 - K1 * ooz * y);
+        
+        // Bounds checking
+        if (xp >= 0 && xp < width && yp >= 0 && yp < height) {
+          const L = cosphi * costheta * sinB - cosA * costheta * sinphi - sinA * sintheta + cosB * (cosA * sintheta - costheta * sinA * sinphi);
+          
+          if (L > 0 && ooz > zbuffer[yp][xp]) {
+            zbuffer[yp][xp] = ooz;
+            const luminance_index = Math.floor(L * 8);
+            const chars = '.,-~:;=!*#$@';
+            output[yp][xp] = chars[luminance_index >= chars.length ? chars.length - 1 : luminance_index];
+          }
+        }
+      }
+    }
+    
+    return output.map(row => row.join('')).join('\n');
+  };
+
+  return (
+    <pre className="ascii-globe">
+      {renderGlobe()}
+    </pre>
+  );
+}
 
 function App() {
   const [apis, setApis] = useState([]);
@@ -93,11 +177,18 @@ function App() {
   return (
     <div className="app">
       <header className="main-header">
-        <h1>BAZAAR // MARKETPLACE</h1>
-        <div className="system-status">
-          <span>STATUS: ONLINE</span>
-          <span>ENCRYPTION: 256-BIT</span>
-          <span>NODES: {apis.length}</span>
+        <div className="header-content">
+          <div className="header-left">
+            <AsciiGlobe />
+          </div>
+          <div className="header-right">
+            <h1>BAZAAR // MARKETPLACE</h1>
+            <div className="system-status">
+              <span>STATUS: ONLINE</span>
+              <span>ENCRYPTION: 256-BIT</span>
+              <span>NODES: {apis.length}</span>
+            </div>
+          </div>
         </div>
       </header>
 
