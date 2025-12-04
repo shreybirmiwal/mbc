@@ -134,7 +134,6 @@ h3 {
     text-align: center;
     border-bottom: 1px solid var(--terminal-green);
     margin-bottom: 1rem;
-    padding-bottom: 0.75rem;
 }
 
 .system-status {
@@ -195,7 +194,6 @@ button:hover {
 /* --- Data & Access Point --- */
 .access-point-container {
     margin-bottom: 1rem;
-    padding-bottom: 1rem;
     border-bottom: 1px solid var(--terminal-dim);
 }
 
