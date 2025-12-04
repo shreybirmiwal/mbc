@@ -192,6 +192,19 @@ button:hover {
 }
 
 /* --- Data & Access Point --- */
+.description-section {
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px dashed var(--terminal-dim);
+}
+
+.description-text {
+    margin-top: 0.5rem;
+    font-size: 0.95rem;
+    color: #b0b0b0;
+    line-height: 1.4;
+}
+
 .access-point-container {
     margin-bottom: 1rem;
     border-bottom: 1px solid var(--terminal-dim);

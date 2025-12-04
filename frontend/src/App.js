@@ -27,17 +27,17 @@ function App() {
       setApis(apisList);
 
       const detailsPromises = apisList.map(async (api) => {
-        if (api.token?.address) {
-          try {
-            const endpoint = api.endpoint.replace(/^\//, '');
-            const infoResponse = await fetch(`${API_BASE_URL}/admin/api-info/${endpoint}`);
-            if (infoResponse.ok) {
-              const info = await infoResponse.json();
-              return { endpoint: api.endpoint, info };
-            }
-          } catch (error) {
-            console.error(`Error fetching info for ${api.endpoint}:`, error);
+        // Always try to fetch API info for updated pricing
+        try {
+          const endpoint = api.endpoint.replace(/^\//, '');
+          const infoResponse = await fetch(`${API_BASE_URL}/admin/api-info/${endpoint}`);
+          if (infoResponse.ok) {
+            const info = await infoResponse.json();
+            return { endpoint: api.endpoint, info };
           }
+        } catch (error) {
+          // API info might not be available if token not deployed yet, that's okay
+          console.error(`Error fetching info for ${api.endpoint}:`, error);
         }
         return { endpoint: api.endpoint, info: null };
       });
@@ -183,6 +183,14 @@ function ConsoleCard({ api, details, index }) {
           <div className="info-section">
             <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>{tokenName}</h2>
 
+            {/* Description */}
+            {(details?.description || api.description) && (
+              <div className="description-section">
+                <div className="data-label">DESCRIPTION:</div>
+                <div className="description-text">{details?.description || api.description}</div>
+              </div>
+            )}
+
             {/* Full URL Access Point */}
             <div className="access-point-container">
               <div className="data-label">ACCESS_POINT:</div>
@@ -197,16 +205,24 @@ function ConsoleCard({ api, details, index }) {
             <div className="data-display">
               <div className="data-row">
                 <span className="data-label">STATUS</span>
-                <span className="data-value" style={{ color: api.status === 'active' ? '#0f0' : 'red' }}>
+                <span className="data-value" style={{ color: api.status === 'active' || api.status === 'deployed' ? '#0f0' : 'red' }}>
                   [{api.status.toUpperCase()}]
                 </span>
               </div>
+
+              {/* API Price - show if available */}
+              {(details?.pricing?.api_price_usd || api.pricing?.api_price_usd) && (
+                <div className="data-row">
+                  <span className="data-label">API_PRICE</span>
+                  <span className="data-value">{formatCurrency(details?.pricing?.api_price_usd || api.pricing?.api_price_usd)}</span>
+                </div>
+              )}
 
               {api.token && (
                 <>
                   <div className="data-row">
                     <span className="data-label">TOKEN_PRICE</span>
-                    <span className="data-value">{formatCurrency(details?.pricing?.token_price_usd)}</span>
+                    <span className="data-value">{formatCurrency(details?.pricing?.token_price_usd || api.pricing?.token_price_usd)}</span>
                   </div>
 
                   <div className="data-row">
