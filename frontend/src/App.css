@@ -1,11 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
 :root {
-    --terminal-green: #00ff41;
-    --terminal-dim: #008f11;
-    --terminal-bg: #0d0d0d;
-    --terminal-glow: 0 0 10px rgba(0, 255, 65, 0.5), 0 0 2px rgba(0, 255, 65, 0.3);
-    --scanline-color: rgba(0, 0, 0, 0.5);
+    /* Changed from #00ff41 (Electric) to #4af626 (IBM Phosphor) - warmer and easier on eyes */
+    --terminal-green: #4af626;
+    --terminal-dim: #2d8f3b;
+    --terminal-bg: #050505;
+    /* Reduced glow intensity for eye comfort */
+    --terminal-glow: 0 0 4px rgba(74, 246, 38, 0.4);
+    --scanline-color: rgba(0, 0, 0, 0.3);
 }
 
 body {
@@ -13,8 +15,8 @@ body {
     background-color: #000;
     color: var(--terminal-green);
     font-family: 'VT323', monospace;
-    /* The retro pixel font */
-    font-size: 18px;
+    font-size: 19px;
+    /* Slightly larger for readability */
     overflow-x: hidden;
 }
 
@@ -24,14 +26,14 @@ body {
     position: relative;
     padding: 2rem;
     padding-bottom: 80px;
-    /* Space for taskbar */
+    /* Made background pattern slightly more subtle */
     background-image:
         linear-gradient(0deg, transparent 24%, var(--scanline-color) 25%, var(--scanline-color) 26%, transparent 27%, transparent 74%, var(--scanline-color) 75%, var(--scanline-color) 76%, transparent 77%, transparent),
-        linear-gradient(90deg, transparent 24%, rgba(0, 255, 0, 0.02) 25%, rgba(0, 255, 0, 0.02) 26%, transparent 27%, transparent 74%, rgba(0, 255, 0, 0.02) 75%, rgba(0, 255, 0, 0.02) 76%, transparent 77%, transparent);
+        linear-gradient(90deg, transparent 24%, rgba(0, 255, 0, 0.01) 25%, rgba(0, 255, 0, 0.01) 26%, transparent 27%, transparent 74%, rgba(0, 255, 0, 0.01) 75%, rgba(0, 255, 0, 0.01) 76%, transparent 77%, transparent);
     background-size: 4px 4px;
 }
 
-/* The screen flicker animation */
+/* Flicker Effect */
 .app::before {
     content: " ";
     display: block;
@@ -40,7 +42,8 @@ body {
     left: 0;
     bottom: 0;
     right: 0;
-    background: rgba(18, 16, 16, 0.1);
+    background: rgba(18, 16, 16, 0.05);
+    /* Reduced opacity */
     opacity: 0;
     z-index: 2;
     pointer-events: none;
@@ -49,15 +52,15 @@ body {
 
 @keyframes flicker {
     0% {
-        opacity: 0.02;
+        opacity: 0.01;
     }
 
     50% {
-        opacity: 0.05;
+        opacity: 0.03;
     }
 
     100% {
-        opacity: 0.02;
+        opacity: 0.01;
     }
 }
 
@@ -71,128 +74,197 @@ h3 {
     letter-spacing: 2px;
 }
 
-a {
-    color: var(--terminal-green);
-    text-decoration: none;
-    border-bottom: 1px dashed var(--terminal-green);
-}
-
-a:hover {
-    background: var(--terminal-green);
-    color: #000;
-}
-
-/* --- Retro Window Containers (Like Image 3) --- */
+/* --- Windows --- */
 .console-window {
-    border: 2px solid var(--terminal-green);
-    background: rgba(0, 10, 0, 0.9);
-    margin-bottom: 2rem;
-    box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+    border: 1px solid var(--terminal-green);
+    /* Thinner border */
+    background: rgba(5, 15, 5, 0.92);
+    margin-bottom: 2.5rem;
+    /* More space between full-width nodes */
+    box-shadow: 0 0 10px rgba(74, 246, 38, 0.1);
+    /* Reduced bloom */
     position: relative;
+    display: flex;
+    flex-direction: column;
 }
 
-/* The header bar of the window */
 .window-header {
     background: var(--terminal-green);
     color: #000;
-    padding: 4px 10px;
+    padding: 6px 15px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-weight: bold;
     text-transform: uppercase;
     border-bottom: 1px solid var(--terminal-green);
+    letter-spacing: 1px;
 }
 
 .window-controls span {
-    margin-left: 10px;
+    margin-left: 15px;
     cursor: pointer;
 }
 
 .window-content {
-    padding: 1.5rem;
+    padding: 2rem;
+    /* More internal padding */
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
 }
 
-/* --- Header & Layout --- */
+/* --- Header --- */
 .main-header {
     text-align: center;
-    border-bottom: 2px solid var(--terminal-green);
-    margin-bottom: 3rem;
-    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--terminal-green);
+    margin-bottom: 4rem;
+    padding-bottom: 1.5rem;
 }
 
 .system-status {
     display: flex;
     justify-content: center;
-    gap: 2rem;
-    font-size: 0.9rem;
+    gap: 3rem;
+    font-size: 1rem;
     color: var(--terminal-dim);
-    margin-top: 0.5rem;
+    margin-top: 1rem;
 }
 
+/* --- Grid / Layout --- */
 .apis-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-    gap: 2rem;
+    /* UPDATED: Full Width Single Column */
+    display: flex;
+    flex-direction: column;
+    max-width: 1000px;
+    /* Prevents it from being too wide on 4k screens */
+    margin: 0 auto;
+    /* Centers the column */
+    gap: 3rem;
 }
 
 /* --- Buttons --- */
 button {
-    background: transparent;
+    background: rgba(0, 0, 0, 0.5);
     border: 1px solid var(--terminal-green);
     color: var(--terminal-green);
     font-family: 'VT323', monospace;
     font-size: 1.2rem;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 1.5rem;
     cursor: pointer;
     text-transform: uppercase;
     transition: all 0.2s;
-    box-shadow: 0 0 5px var(--terminal-dim);
 }
 
 button:hover {
     background: var(--terminal-green);
     color: #000;
-    box-shadow: 0 0 15px var(--terminal-green);
+    box-shadow: 0 0 10px var(--terminal-green);
 }
 
-.btn-glitch {
-    position: relative;
+.copy-btn {
+    font-size: 1rem;
+    padding: 2px 8px;
+    margin-left: 12px;
+    border: 1px dashed var(--terminal-dim);
+    color: var(--terminal-dim);
 }
 
-/* --- Metrics & Data --- */
+.copy-btn:hover {
+    border-style: solid;
+    color: #000;
+    background: var(--terminal-dim);
+    box-shadow: none;
+}
+
+/* --- Data & Access Point --- */
+.access-point-container {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--terminal-dim);
+}
+
+.url-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #021202;
+    padding: 10px;
+    border: 1px solid var(--terminal-dim);
+    margin-top: 8px;
+}
+
+.url-text {
+    word-break: break-all;
+    font-size: 1rem;
+    color: #e0e0e0;
+    /* Slightly off-white for readability */
+}
+
 .data-row {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     border-bottom: 1px dashed var(--terminal-dim);
-    padding: 0.5rem 0;
+    padding: 0.8rem 0;
 }
 
 .data-label {
     color: var(--terminal-dim);
+    font-size: 1.1rem;
 }
 
 .data-value {
-    text-shadow: 0 0 5px var(--terminal-green);
+    font-size: 1.2rem;
+    /* Removed heavy text-shadow for better reading */
 }
 
-/* --- Input Forms --- */
+/* --- Chart --- */
+.chart-section {
+    margin-top: 2rem;
+}
+
+.chart-label {
+    font-size: 0.9rem;
+    color: var(--terminal-dim);
+    margin-bottom: 8px;
+}
+
+.chart-frame {
+    border: 1px solid var(--terminal-dim);
+    padding: 4px;
+    background: #000;
+}
+
+.dexscreener-chart-iframe {
+    /* Adjusted filter to match the new calmer green */
+    filter: grayscale(100%) sepia(100%) hue-rotate(85deg) saturate(400%) contrast(0.9) brightness(0.9);
+    width: 100%;
+    height: 400px;
+    /* Taller chart since we have full width */
+    display: block;
+    opacity: 0.85;
+    /* Makes chart slightly dimmer to match aesthetic */
+}
+
+/* --- Forms & Modals --- */
 .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.85);
+    background: rgba(0, 0, 0, 0.9);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 100;
+    backdrop-filter: blur(2px);
 }
 
 .form-grid {
     display: grid;
-    gap: 1rem;
+    gap: 1.5rem;
 }
 
 input,
@@ -202,9 +274,10 @@ textarea {
     border: 1px solid var(--terminal-dim);
     color: var(--terminal-green);
     font-family: 'VT323', monospace;
-    font-size: 1.1rem;
-    padding: 0.5rem;
+    font-size: 1.2rem;
+    padding: 0.8rem;
     width: 100%;
+    box-sizing: border-box;
 }
 
 input:focus,
@@ -212,48 +285,34 @@ select:focus,
 textarea:focus {
     outline: none;
     border-color: var(--terminal-green);
-    box-shadow: 0 0 8px var(--terminal-dim);
 }
 
-/* --- Taskbar (Bottom of screen) --- */
+/* --- Taskbar --- */
 .taskbar {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    height: 40px;
+    height: 45px;
     background: var(--terminal-green);
     color: #000;
     display: flex;
     align-items: center;
-    padding: 0 1rem;
+    padding: 0 1.5rem;
     z-index: 50;
     justify-content: space-between;
     font-weight: bold;
+    font-size: 1.1rem;
 }
 
 .taskbar-items {
     display: flex;
-    gap: 2rem;
+    gap: 3rem;
 }
 
 .start-btn {
     background: #000;
     color: var(--terminal-green);
-    padding: 2px 10px;
+    padding: 4px 15px;
     border: none;
-}
-
-/* --- Chart --- */
-.chart-frame {
-    margin-top: 1rem;
-    border: 1px solid var(--terminal-dim);
-    padding: 2px;
-}
-
-/* Makes the chart look a bit more retro/washed out */
-.dexscreener-chart-iframe {
-    filter: grayscale(80%) sepia(100%) hue-rotate(50deg) saturate(300%) contrast(1.2);
-    width: 100%;
-    height: 300px;
 }

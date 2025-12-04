@@ -221,7 +221,7 @@ function ConsoleCard({ api, details, index }) {
                   <div className="chart-label">> LIVE_MARKET_DATA_STREAM</div>
                   <div className="chart-frame">
                     <iframe
-                      src={`https://dexscreener.com/base/${tokenAddress}?embed=1&theme=dark&trades=0&info=0`}
+                      src={`https://dexscreener.com/base/${tokenAddress}?embed=1&chartOnly=1&theme=dark&trades=0&info=0`}
                       title="DexScreener Chart"
                       className="dexscreener-chart-iframe"
                       frameBorder="0"
