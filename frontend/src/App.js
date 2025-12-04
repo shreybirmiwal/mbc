@@ -152,8 +152,8 @@ function ConsoleCard({ api, details, index }) {
   const tokenName = details?.api_name || api.name;
 
   const formatCurrency = (value) => {
-    if (!value) return '$0.00';
-    return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`;
+    if (!value) return '$0.0000000000';
+    return `$${value.toLocaleString(undefined, { minimumFractionDigits: 10, maximumFractionDigits: 10 })}`;
   };
 
   const handleCopy = (text, label) => {
