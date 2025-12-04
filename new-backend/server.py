@@ -21,7 +21,8 @@ import json
 import os
 from dotenv import load_dotenv
 from x402.flask.middleware import PaymentMiddleware
-from cdp.x402 import create_facilitator_config
+from x402.facilitator import FacilitatorConfig
+
 try:
     from pydantic import ValidationError
 except ImportError:
@@ -57,21 +58,22 @@ FLAUNCH_BASE_URL = "https://web2-api.flaunch.gg/api/v1"
 FLAUNCH_DATA_API = "https://dev-api.flayerlabs.xyz/v1"
 NETWORK = "base"  # Mainnet - using Base network for production
 
-# CDP Facilitator Configuration for Mainnet
-CDP_API_KEY_ID = os.getenv("CDP_API_KEY_ID")
-CDP_API_KEY_SECRET = os.getenv("CDP_API_KEY_SECRET")
+# Mogami Facilitator Configuration for Mainnet
+# Mogami facilitator supports Base and Base Sepolia networks
+# No authentication required for public access
+def create_mogami_facilitator_config() -> FacilitatorConfig:
+    """Create a FacilitatorConfig for Mogami facilitator (no auth required)."""
+    async def create_headers():
+        """Create headers for Mogami facilitator (no auth needed, returns empty dict)."""
+        return {}
+    
+    return {
+        "url": "https://facilitator.mogami.tech",
+        "create_headers": create_headers
+    }
 
-if not CDP_API_KEY_ID or not CDP_API_KEY_SECRET:
-    raise ValueError(
-        "CDP_API_KEY_ID and CDP_API_KEY_SECRET must be set in environment variables. "
-        "Please add them to your .env file."
-    )
-
-# Create facilitator config for mainnet
-facilitator_config = create_facilitator_config(
-    api_key_id=CDP_API_KEY_ID,
-    api_key_secret=CDP_API_KEY_SECRET,
-)
+# Create facilitator config for mainnet using Mogami
+facilitator_config = create_mogami_facilitator_config()
 
 class FlaunchTokenStore:
     def __init__(self, preexisting_routes_file: Optional[str] = None):
@@ -327,7 +329,7 @@ class FlaunchTokenStore:
                 volume_24h_usd = float(volume_obj.get("volumeUSDC24h", 0))
                 volume_7d_usd = float(volume_obj.get("volumeUSDC7d", 0))
                 
-                print(f"[PRICE] Token: ${token_price_usd:.8f} USD, Vol24h: ${volume_24h_usd:.2f}, Vol7d: ${volume_7d_usd:.2f}")
+                #print(f"[PRICE] Token: ${token_price_usd:.8f} USD, Vol24h: ${volume_24h_usd:.2f}, Vol7d: ${volume_7d_usd:.2f}")
                 
                 return {
                     "token_price_usd": token_price_usd,
@@ -368,7 +370,7 @@ class FlaunchTokenStore:
                         
                         if old_api_price > 0:
                             change = ((new_api_price - old_api_price) / old_api_price * 100)
-                            print(f"[SYNC] {api_config['symbol']}: Token ${token_price:.8f} -> API ${new_api_price:.6f} ({change:+.2f}%)")
+                            #print(f"[SYNC] {api_config['symbol']}: Token ${token_price:.8f} -> API ${new_api_price:.6f} ({change:+.2f}%)")
     
     def update_x402_route(self, endpoint: str, api_config: dict):
         """Update or add x402 payment middleware for this route
@@ -401,12 +403,12 @@ class FlaunchTokenStore:
             price=price_str,
             pay_to_address=api_config["wallet_address"],
             network="base",  # Mainnet Base network
-            facilitator_config=facilitator_config  # CDP facilitator for mainnet
+            facilitator_config=facilitator_config  # Mogami facilitator for mainnet
         )
         
         symbol = api_config.get('symbol', 'token')
-        print(f"[x402] Updated: {endpoint} -> {price_str}")
-        print(f"       Token: ${token_price_usd:.8f} x {price_multiplier} = API Price: ${api_price_usd:.6f}")
+        #print(f"[x402] Updated: {endpoint} -> {price_str}")
+        #print(f"       Token: ${token_price_usd:.8f} x {price_multiplier} = API Price: ${api_price_usd:.6f}")
     
     def finalize_token_launch(self, endpoint: str):
         if endpoint not in self.apis:
@@ -518,7 +520,7 @@ def handle_x402_error(e):
             "message": "The payment verification service encountered an error. Please ensure you're using the correct network (Base mainnet).",
             "details": "The facilitator may not support the requested network or the payment response was invalid.",
             "network": NETWORK,
-            "facilitator": "CDP Facilitator (mainnet)",
+            "facilitator": "Mogami Facilitator (mainnet)",
             "error_type": error_type
         }), 500
     
@@ -1048,7 +1050,7 @@ if __name__ == "__main__":
     print(f"Protocol: x402")
     print(f"Network: {NETWORK}")
     print(f"Chain ID: 8453 (Base mainnet)")
-    print(f"Facilitator: CDP Facilitator (mainnet)")
+    print(f"Facilitator: Mogami Facilitator (mainnet)")
     print(f"\nWrap any existing API with x402 token-based payments!")
     print(f"Real tokens launched on Flaunch, prices synced to x402")
     print(f"{'='*60}\n")
