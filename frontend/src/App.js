@@ -82,7 +82,7 @@ function App() {
     return (
       <div className="app" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <div style={{ textAlign: 'center' }}>
-          <h2>INITIALIZING UPLINK...</h2>
+          <h2>INITIALIZING BAZAAR...</h2>
           <p>>>> ESTABLISHING SECURE CONNECTION</p>
           <p>>>> DECRYPTING PACKETS</p>
         </div>
@@ -93,7 +93,7 @@ function App() {
   return (
     <div className="app">
       <header className="main-header">
-        <h1>ROOT_ACCESS // MARKETPLACE</h1>
+        <h1>BAZAAR // MARKETPLACE</h1>
         <div className="system-status">
           <span>STATUS: ONLINE</span>
           <span>ENCRYPTION: 256-BIT</span>
@@ -123,11 +123,11 @@ function App() {
         )}
       </div>
 
-      {/* Taskbar similar to Image 3 */}
+      {/* Taskbar */}
       <div className="taskbar">
         <div className="taskbar-items">
           <button className="start-btn" onClick={() => setShowCreateForm(true)}>[ + NEW_PROTOCOL ]</button>
-          <span> > SYSTEM_READY</span>
+          <span> > BAZAAR_OS_READY</span>
           <span> > MONITORING_TRAFFIC</span>
         </div>
         <div>{time}</div>
@@ -147,24 +147,24 @@ function App() {
 
 // Reusable Console Window Component
 function ConsoleCard({ api, details, index }) {
-  const [showChart, setShowChart] = useState(false);
-  const apiUrl = `${API_BASE_URL}${api.endpoint}`;
+  const fullUrl = `${API_BASE_URL}${api.endpoint}`;
   const tokenAddress = api.token?.address || details?.token_address;
   const tokenName = details?.api_name || api.name;
-
-  // Simulated terminal typing effect for description
-  const description = api.description || 'NO_DESCRIPTION_AVAILABLE';
 
   const formatCurrency = (value) => {
     if (!value) return '$0.00';
     return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`;
   };
 
+  const handleCopy = (text, label) => {
+    navigator.clipboard.writeText(text);
+    alert(`>> ${label} COPIED TO CLIPBOARD`);
+  };
+
   return (
     <div className="console-window">
-      {/* Visual Header like 'Decoding Console' in Image 3 */}
       <div className="window-header">
-        <span>> NODE_{index + 1}_CONSOLE</span>
+        <span>> BAZAAR_NODE_{index + 1}</span>
         <div className="window-controls">
           <span>_</span>
           <span>□</span>
@@ -173,9 +173,17 @@ function ConsoleCard({ api, details, index }) {
       </div>
 
       <div className="window-content">
-        <h2 style={{ marginTop: 0 }}>{tokenName}</h2>
-        <div style={{ color: 'var(--terminal-dim)', marginBottom: '1rem' }}>
-          ACCESS_POINT: {api.endpoint}
+        <h2 style={{ marginTop: 0, marginBottom: '0.5rem' }}>{tokenName}</h2>
+
+        {/* Full URL Access Point */}
+        <div className="access-point-container">
+          <div className="data-label">ACCESS_POINT:</div>
+          <div className="url-row">
+            <span className="url-text">{fullUrl}</span>
+            <button className="copy-btn" onClick={() => handleCopy(fullUrl, 'URL')}>
+              [COPY]
+            </button>
+          </div>
         </div>
 
         <div className="data-display">
@@ -192,34 +200,33 @@ function ConsoleCard({ api, details, index }) {
                 <span className="data-label">TOKEN_PRICE</span>
                 <span className="data-value">{formatCurrency(details?.pricing?.token_price_usd)}</span>
               </div>
+
               <div className="data-row">
-                <span className="data-label">24H_VOL</span>
-                <span className="data-value">{formatCurrency(details?.pricing?.volume_24h_usd)}</span>
-              </div>
-              <div className="data-row">
-                <span className="data-label">CONTRACT_ADDR</span>
-                <span className="data-value" style={{ fontSize: '0.8em' }}>
-                  {tokenAddress ? `${tokenAddress.slice(0, 6)}...${tokenAddress.slice(-4)}` : 'NULL'}
-                </span>
+                <span className="data-label">CONTRACT</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span className="data-value" style={{ fontSize: '0.8em' }}>
+                    {tokenAddress ? `${tokenAddress.slice(0, 6)}...${tokenAddress.slice(-4)}` : 'NULL'}
+                  </span>
+                  {tokenAddress && (
+                    <button className="copy-btn" onClick={() => handleCopy(tokenAddress, 'CONTRACT ADDRESS')}>
+                      [COPY]
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <div style={{ marginTop: '1rem', display: 'flex', gap: '10px' }}>
-                <button onClick={() => setShowChart(!showChart)}>
-                  {showChart ? '[ CLOSE_VISUAL ]' : '[ VIEW_CHART ]'}
-                </button>
-                <a href={apiUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', padding: '0.5rem', border: '1px dashed #0f0' }}>
-                  TEST_ENDPOINT
-                </a>
-              </div>
-
-              {showChart && tokenAddress && (
-                <div className="chart-frame">
-                  <iframe
-                    src={`https://dexscreener.com/base/${tokenAddress}?embed=1&theme=dark&trades=0&info=0`}
-                    title="DexScreener Chart"
-                    className="dexscreener-chart-iframe"
-                    frameBorder="0"
-                  />
+              {/* Chart Always Visible */}
+              {tokenAddress && (
+                <div className="chart-section">
+                  <div className="chart-label">> LIVE_MARKET_DATA_STREAM</div>
+                  <div className="chart-frame">
+                    <iframe
+                      src={`https://dexscreener.com/base/${tokenAddress}?embed=1&theme=dark&trades=0&info=0`}
+                      title="DexScreener Chart"
+                      className="dexscreener-chart-iframe"
+                      frameBorder="0"
+                    />
+                  </div>
                 </div>
               )}
             </>
@@ -243,7 +250,7 @@ function CreateAPIForm({ onSubmit, onCancel }) {
   return (
     <div className="console-window" style={{ width: '500px', margin: 0 }}>
       <div className="window-header">
-        <span>> EXECUTE_NEW_PROTOCOL</span>
+        <span>> BAZAAR // EXECUTE_NEW_PROTOCOL</span>
         <div className="window-controls" onClick={onCancel} style={{ cursor: 'pointer' }}>X</div>
       </div>
       <div className="window-content">
