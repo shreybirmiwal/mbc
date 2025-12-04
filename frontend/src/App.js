@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 
 const API_BASE_URL = 'http://127.0.0.1:5000';
-
-// Constants for API creation (not visible to users)
 const DEFAULT_PRICE_MULTIPLIER = 10000;
 const DEFAULT_STARTING_MARKET_CAP = '1000000';
 
@@ -12,9 +10,13 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [apiDetails, setApiDetails] = useState({});
+  const [time, setTime] = useState(new Date().toLocaleTimeString());
 
+  // Real-time clock for the taskbar
   useEffect(() => {
+    const timer = setInterval(() => setTime(new Date().toLocaleTimeString()), 1000);
     fetchApis();
+    return () => clearInterval(timer);
   }, []);
 
   const fetchApis = async () => {
@@ -24,11 +26,10 @@ function App() {
       const apisList = data.apis || [];
       setApis(apisList);
 
-      // Fetch detailed info for each API
       const detailsPromises = apisList.map(async (api) => {
         if (api.token?.address) {
           try {
-            const endpoint = api.endpoint.replace(/^\//, ''); // Remove leading slash
+            const endpoint = api.endpoint.replace(/^\//, '');
             const infoResponse = await fetch(`${API_BASE_URL}/admin/api-info/${endpoint}`);
             if (infoResponse.ok) {
               const info = await infoResponse.json();
@@ -58,346 +59,236 @@ function App() {
     try {
       const response = await fetch(`${API_BASE_URL}/admin/create-api`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
 
       if (response.ok) {
-        await response.json(); // Consume response
-        alert('API created successfully!');
+        await response.json();
+        alert('>> SYSTEM MSG: UPLOAD SUCCESSFUL');
         setShowCreateForm(false);
-        fetchApis(); // Refresh the list
+        fetchApis();
       } else {
         const error = await response.json();
-        alert(`Error: ${error.error || 'Failed to create API'}`);
+        alert(`>> ERROR: ${error.error || 'EXECUTION FAILED'}`);
       }
     } catch (error) {
       console.error('Error creating API:', error);
-      alert('Error creating API. Please try again.');
+      alert('>> SYSTEM FATAL ERROR');
     }
   };
 
   if (loading) {
-    return <div className="loading">Loading APIs...</div>;
-  }
-
-  return (
-    <div className="app">
-      <header className="header">
-        <h1>API Marketplace</h1>
-        <p>Token-based API access powered by x402 & Flaunch</p>
-        <button
-          className="create-button"
-          onClick={() => setShowCreateForm(!showCreateForm)}
-        >
-          {showCreateForm ? 'Cancel' : '+ Create New API'}
-        </button>
-      </header>
-
-      {showCreateForm && (
-        <CreateAPIForm
-          onSubmit={handleCreateAPI}
-          onCancel={() => setShowCreateForm(false)}
-        />
-      )}
-
-      <div className="apis-container">
-        {apis.length === 0 ? (
-          <div className="empty-state">
-            <p>No APIs available. Create your first API!</p>
-          </div>
-        ) : (
-          apis.map((api) => (
-            <APICard
-              key={api.endpoint}
-              api={api}
-              details={apiDetails[api.endpoint]}
-            />
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
-
-function DexScreenerChart({ tokenAddress }) {
-  if (!tokenAddress) {
     return (
-      <div className="chart-error">
-        <p>Token address not available</p>
+      <div className="app" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <h2>INITIALIZING UPLINK...</h2>
+          <p>>>> ESTABLISHING SECURE CONNECTION</p>
+          <p>>>> DECRYPTING PACKETS</p>
+        </div>
       </div>
     );
   }
 
-  // DexScreener embed URL for Base network
-  // Note: DexScreener supports token addresses directly on their platform
-  // The embed parameter enables embedding mode
-  const chartUrl = `https://dexscreener.com/base/${tokenAddress}?embed=1&theme=dark&trades=0&info=0`;
-
   return (
-    <div className="dexscreener-chart-container">
-      <iframe
-        src={chartUrl}
-        title="DexScreener Chart"
-        className="dexscreener-chart-iframe"
-        frameBorder="0"
-        allow="clipboard-write"
-        loading="lazy"
-      />
-      <div className="chart-fallback">
-        <p>
-          <a
-            href={`https://dexscreener.com/base/${tokenAddress}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="chart-link"
-          >
-            View on DexScreener →
-          </a>
-        </p>
+    <div className="app">
+      <header className="main-header">
+        <h1>ROOT_ACCESS // MARKETPLACE</h1>
+        <div className="system-status">
+          <span>STATUS: ONLINE</span>
+          <span>ENCRYPTION: 256-BIT</span>
+          <span>NODES: {apis.length}</span>
+        </div>
+      </header>
+
+      {/* Main Content Area */}
+      <div className="apis-grid">
+        {apis.length === 0 ? (
+          <div className="console-window">
+            <div className="window-header">SYSTEM_MSG</div>
+            <div className="window-content">
+              <p>>> NO DATA FOUND.</p>
+              <p>>> INITIATE NEW PROTOCOL TO BEGIN.</p>
+            </div>
+          </div>
+        ) : (
+          apis.map((api, index) => (
+            <ConsoleCard
+              key={api.endpoint}
+              api={api}
+              details={apiDetails[api.endpoint]}
+              index={index}
+            />
+          ))
+        )}
       </div>
+
+      {/* Taskbar similar to Image 3 */}
+      <div className="taskbar">
+        <div className="taskbar-items">
+          <button className="start-btn" onClick={() => setShowCreateForm(true)}>[ + NEW_PROTOCOL ]</button>
+          <span> > SYSTEM_READY</span>
+          <span> > MONITORING_TRAFFIC</span>
+        </div>
+        <div>{time}</div>
+      </div>
+
+      {showCreateForm && (
+        <div className="modal-overlay">
+          <CreateAPIForm
+            onSubmit={handleCreateAPI}
+            onCancel={() => setShowCreateForm(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }
 
-function APICard({ api, details }) {
+// Reusable Console Window Component
+function ConsoleCard({ api, details, index }) {
   const [showChart, setShowChart] = useState(false);
   const apiUrl = `${API_BASE_URL}${api.endpoint}`;
-  const flaunchLink = api.token?.view_on_flaunch || details?.links?.flaunch;
   const tokenAddress = api.token?.address || details?.token_address;
-
-  // Extract pricing from details (simplified structure)
-  const tokenPriceUsd = details?.pricing?.token_price_usd || api.pricing?.token_price_usd || 0;
-  const apiPriceUsd = details?.pricing?.api_price_usd || api.pricing?.api_price_usd || 0;
-  const priceMultiplier = details?.pricing?.price_multiplier || api.pricing?.price_multiplier || 0;
-  const volume24h = details?.pricing?.volume_24h_usd || api.pricing?.volume_24h_usd || 0;
-  const volume7d = details?.pricing?.volume_7d_usd || api.pricing?.volume_7d_usd || 0;
-
-  const tokenSymbol = api.token?.symbol || details?.symbol || 'N/A';
   const tokenName = details?.api_name || api.name;
 
-  // Format numbers
+  // Simulated terminal typing effect for description
+  const description = api.description || 'NO_DESCRIPTION_AVAILABLE';
+
   const formatCurrency = (value) => {
-    if (value === 0) return '$0.00';
-    if (value < 0.000001) return `$${value.toFixed(10)}`;
-    if (value < 0.01) return `$${value.toFixed(8)}`;
-    if (value < 1) return `$${value.toFixed(4)}`;
-    if (value < 1000) return `$${value.toFixed(2)}`;
-    if (value < 1000000) return `$${(value / 1000).toFixed(2)}K`;
-    if (value < 1000000000) return `$${(value / 1000000).toFixed(2)}M`;
-    return `$${(value / 1000000000).toFixed(2)}B`;
+    if (!value) return '$0.00';
+    return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`;
   };
 
   return (
-    <div className="api-card">
-      <div className="api-card-header">
-        <div>
-          <h2>{api.name}</h2>
-          <p className="api-endpoint">{api.endpoint}</p>
-          <p className="api-description">{api.description || 'No description'}</p>
-        </div>
-        <div className="api-status">
-          <span className={`status-badge ${api.status}`}>
-            {api.status}
-          </span>
+    <div className="console-window">
+      {/* Visual Header like 'Decoding Console' in Image 3 */}
+      <div className="window-header">
+        <span>> NODE_{index + 1}_CONSOLE</span>
+        <div className="window-controls">
+          <span>_</span>
+          <span>□</span>
+          <span>X</span>
         </div>
       </div>
 
-      {api.token && (
-        <div className="token-metrics">
-          <div className="token-header">
-            <div className="token-name-symbol">
-              <h3>{tokenName}</h3>
-              <span className="token-symbol">{tokenSymbol}</span>
-            </div>
-            {flaunchLink && (
-              <a
-                href={flaunchLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flaunch-link"
-              >
-                View on Flaunch →
-              </a>
-            )}
+      <div className="window-content">
+        <h2 style={{ marginTop: 0 }}>{tokenName}</h2>
+        <div style={{ color: 'var(--terminal-dim)', marginBottom: '1rem' }}>
+          ACCESS_POINT: {api.endpoint}
+        </div>
+
+        <div className="data-display">
+          <div className="data-row">
+            <span className="data-label">STATUS</span>
+            <span className="data-value" style={{ color: api.status === 'active' ? '#0f0' : 'red' }}>
+              [{api.status.toUpperCase()}]
+            </span>
           </div>
 
-          {/* Pricing Section - API Price */}
-          <div className="pricing-section">
-            <div className="price-highlight">
-              <label>💰 API Price per Call</label>
-              <span className="api-price">{formatCurrency(apiPriceUsd)}</span>
-            </div>
-            <div className="price-transform">
-              <span className="transform-text">
-                Token: {formatCurrency(tokenPriceUsd)} × {priceMultiplier}
-              </span>
-            </div>
-          </div>
+          {api.token && (
+            <>
+              <div className="data-row">
+                <span className="data-label">TOKEN_PRICE</span>
+                <span className="data-value">{formatCurrency(details?.pricing?.token_price_usd)}</span>
+              </div>
+              <div className="data-row">
+                <span className="data-label">24H_VOL</span>
+                <span className="data-value">{formatCurrency(details?.pricing?.volume_24h_usd)}</span>
+              </div>
+              <div className="data-row">
+                <span className="data-label">CONTRACT_ADDR</span>
+                <span className="data-value" style={{ fontSize: '0.8em' }}>
+                  {tokenAddress ? `${tokenAddress.slice(0, 6)}...${tokenAddress.slice(-4)}` : 'NULL'}
+                </span>
+              </div>
 
-          <div className="metrics-grid">
-            <div className="metric">
-              <label>24h Volume</label>
-              <span className="metric-value">{formatCurrency(volume24h)}</span>
-            </div>
-            <div className="metric">
-              <label>7d Volume</label>
-              <span className="metric-value">{formatCurrency(volume7d)}</span>
-            </div>
-            <div className="metric">
-              <label>Contract Address</label>
-              <span className="metric-value contract-address">
-                {tokenAddress ? `${tokenAddress.slice(0, 6)}...${tokenAddress.slice(-4)}` : 'N/A'}
-              </span>
-            </div>
-          </div>
+              <div style={{ marginTop: '1rem', display: 'flex', gap: '10px' }}>
+                <button onClick={() => setShowChart(!showChart)}>
+                  {showChart ? '[ CLOSE_VISUAL ]' : '[ VIEW_CHART ]'}
+                </button>
+                <a href={apiUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', padding: '0.5rem', border: '1px dashed #0f0' }}>
+                  TEST_ENDPOINT
+                </a>
+              </div>
 
-          {/* DexScreener Chart Section */}
-          {tokenAddress && (
-            <div className="chart-section">
-              <button
-                className="chart-toggle-button"
-                onClick={() => setShowChart(!showChart)}
-                type="button"
-              >
-                {showChart ? '▼ Hide Chart' : '📈 View Chart on DexScreener'}
-              </button>
-              {showChart && (
-                <div className={`chart-container ${showChart ? 'expanded' : ''}`}>
-                  <DexScreenerChart tokenAddress={tokenAddress} />
+              {showChart && tokenAddress && (
+                <div className="chart-frame">
+                  <iframe
+                    src={`https://dexscreener.com/base/${tokenAddress}?embed=1&theme=dark&trades=0&info=0`}
+                    title="DexScreener Chart"
+                    className="dexscreener-chart-iframe"
+                    frameBorder="0"
+                  />
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
-      )}
-
-      <div className="api-links">
-        <a
-          href={apiUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="link-button"
-        >
-          🔗 API Endpoint (x402)
-        </a>
       </div>
     </div>
   );
 }
-
 
 function CreateAPIForm({ onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
-    name: '',
-    endpoint: '',
-    target_url: '',
-    method: 'GET',
-    wallet_address: '',
-    description: '',
+    name: '', endpoint: '', target_url: '', method: 'GET',
+    wallet_address: '', description: '',
     price_multiplier: DEFAULT_PRICE_MULTIPLIER,
-    starting_market_cap: DEFAULT_STARTING_MARKET_CAP,
-    input_format: {},
-    output_format: {}
+    starting_market_cap: DEFAULT_STARTING_MARKET_CAP
   });
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   return (
-    <div className="create-form-container">
-      <form className="create-form" onSubmit={handleSubmit}>
-        <h2>Create New API</h2>
+    <div className="console-window" style={{ width: '500px', margin: 0 }}>
+      <div className="window-header">
+        <span>> EXECUTE_NEW_PROTOCOL</span>
+        <div className="window-controls" onClick={onCancel} style={{ cursor: 'pointer' }}>X</div>
+      </div>
+      <div className="window-content">
+        <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="form-grid">
 
-        <div className="form-group">
-          <label>API Name *</label>
-          <input
-            type="text"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            required
-            placeholder="e.g., Weather API"
-          />
-        </div>
+          <div>
+            <label>>> NAME_ID:</label>
+            <input name="name" onChange={handleChange} placeholder="Required..." required />
+          </div>
 
-        <div className="form-group">
-          <label>Endpoint *</label>
-          <input
-            type="text"
-            name="endpoint"
-            value={formData.endpoint}
-            onChange={handleChange}
-            required
-            placeholder="/weather"
-          />
-        </div>
+          <div>
+            <label>>> ENDPOINT_SLUG:</label>
+            <input name="endpoint" onChange={handleChange} placeholder="/example" required />
+          </div>
 
-        <div className="form-group">
-          <label>Target URL *</label>
-          <input
-            type="url"
-            name="target_url"
-            value={formData.target_url}
-            onChange={handleChange}
-            required
-            placeholder="https://api.example.com/weather"
-          />
-        </div>
+          <div>
+            <label>>> TARGET_URL:</label>
+            <input name="target_url" onChange={handleChange} type="url" required />
+          </div>
 
-        <div className="form-group">
-          <label>Method *</label>
-          <select
-            name="method"
-            value={formData.method}
-            onChange={handleChange}
-            required
-          >
-            <option value="GET">GET</option>
-            <option value="POST">POST</option>
-          </select>
-        </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <label>>> METHOD:</label>
+              <select name="method" onChange={handleChange}>
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+              </select>
+            </div>
+            <div>
+              <label>>> CREATOR_WALLET:</label>
+              <input name="wallet_address" onChange={handleChange} required />
+            </div>
+          </div>
 
-        <div className="form-group">
-          <label>Wallet Address *</label>
-          <input
-            type="text"
-            name="wallet_address"
-            value={formData.wallet_address}
-            onChange={handleChange}
-            required
-            placeholder="0x..."
-          />
-        </div>
+          <div>
+            <label>>> DATA_DESCRIPTION:</label>
+            <textarea name="description" rows="3" onChange={handleChange}></textarea>
+          </div>
 
-        <div className="form-group">
-          <label>Description</label>
-          <textarea
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            placeholder="Describe what this API does..."
-            rows="3"
-          />
-        </div>
-
-        <div className="form-actions">
-          <button type="submit" className="submit-button">Create API</button>
-          <button type="button" onClick={onCancel} className="cancel-button">Cancel</button>
-        </div>
-      </form>
+          <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'space-between' }}>
+            <button type="button" onClick={onCancel} style={{ borderColor: 'red', color: 'red' }}>[ ABORT ]</button>
+            <button type="submit">[ INITIATE ]</button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

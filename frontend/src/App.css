@@ -1,661 +1,259 @@
-* {
-    box-sizing: border-box;
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+:root {
+    --terminal-green: #00ff41;
+    --terminal-dim: #008f11;
+    --terminal-bg: #0d0d0d;
+    --terminal-glow: 0 0 10px rgba(0, 255, 65, 0.5), 0 0 2px rgba(0, 255, 65, 0.3);
+    --scanline-color: rgba(0, 0, 0, 0.5);
 }
 
 body {
     margin: 0;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
+    background-color: #000;
+    color: var(--terminal-green);
+    font-family: 'VT323', monospace;
+    /* The retro pixel font */
+    font-size: 18px;
+    overflow-x: hidden;
 }
 
+/* --- CRT & Scanline Effects --- */
 .app {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-}
-
-.header {
-    text-align: center;
-    color: white;
-    margin-bottom: 40px;
-}
-
-.header h1 {
-    font-size: 2.5rem;
-    margin: 0 0 10px 0;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.header p {
-    font-size: 1.1rem;
-    margin: 0 0 20px 0;
-    opacity: 0.9;
-}
-
-.create-button {
-    background: white;
-    color: #667eea;
-    border: none;
-    padding: 12px 24px;
-    font-size: 1rem;
-    font-weight: 600;
-    border-radius: 8px;
-    cursor: pointer;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.create-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-}
-
-.loading {
-    text-align: center;
-    color: white;
-    font-size: 1.5rem;
-    padding: 40px;
-}
-
-.empty-state {
-    text-align: center;
-    color: white;
-    padding: 60px 20px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    backdrop-filter: blur(10px);
-}
-
-.apis-container {
-    display: grid;
-    gap: 20px;
-}
-
-.api-card {
-    background: white;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.api-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-}
-
-.api-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 16px;
-}
-
-.api-card-header h2 {
-    margin: 0 0 8px 0;
-    color: #333;
-    font-size: 1.5rem;
-}
-
-.api-endpoint {
-    font-family: 'Courier New', monospace;
-    color: #667eea;
-    font-size: 0.9rem;
-    margin: 4px 0;
-    font-weight: 600;
-}
-
-.api-description {
-    color: #666;
-    margin: 8px 0 0 0;
-    font-size: 0.95rem;
-}
-
-.status-badge {
-    display: inline-block;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.status-badge.deployed {
-    background: #10b981;
-    color: white;
-}
-
-.status-badge.launching {
-    background: #f59e0b;
-    color: white;
-}
-
-.token-metrics {
-    margin: 20px 0;
-    padding: 20px;
-    background: #f9fafb;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-}
-
-.token-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid #e5e7eb;
-}
-
-.token-name-symbol {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.token-name-symbol h3 {
-    margin: 0;
-    color: #333;
-    font-size: 1.3rem;
-}
-
-.token-symbol {
-    font-weight: 700;
-    color: #667eea;
-    font-size: 1rem;
-    text-transform: uppercase;
-}
-
-.flaunch-link {
-    color: #667eea;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 0.95rem;
-    transition: color 0.2s;
-}
-
-.flaunch-link:hover {
-    color: #5568d3;
-    text-decoration: underline;
-}
-
-/* Pricing Section - API Price vs Token Price */
-.pricing-section {
-    margin: 20px 0;
-    padding: 20px;
-    background: linear-gradient(135deg, #667eea15, #764ba215);
-    border-radius: 12px;
-    border: 2px solid #667eea30;
-}
-
-.price-highlight {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.price-highlight label {
-    font-size: 0.95rem;
-    color: #666;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.api-price {
-    font-size: 2rem;
-    color: #667eea;
-    font-weight: 900;
-    letter-spacing: -0.5px;
-}
-
-.price-transform {
-    padding-top: 8px;
-    border-top: 1px solid #667eea20;
-}
-
-.transform-text {
-    font-size: 0.9rem;
-    color: #888;
-    font-family: 'Courier New', monospace;
-}
-
-.metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-}
-
-.metric {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.metric label {
-    font-size: 0.85rem;
-    color: #666;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.metric-value {
-    font-size: 1.3rem;
-    color: #333;
-    font-weight: 700;
-}
-
-.metric-value.contract-address {
-    font-family: 'Courier New', monospace;
-    font-size: 0.95rem;
-    color: #667eea;
-    word-break: break-all;
-}
-
-/* DexScreener Chart Section */
-.chart-section {
-    margin-top: 24px;
-    padding-top: 24px;
-    border-top: 2px solid #e5e7eb;
-}
-
-.chart-toggle-button {
-    width: 100%;
-    padding: 12px 16px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.chart-toggle-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    background: linear-gradient(135deg, #5568d3, #6a3f8f);
-}
-
-.chart-container {
-    margin-top: 16px;
-    border-radius: 8px;
-    overflow: hidden;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    opacity: 0;
-    max-height: 0;
-    transition: all 0.3s ease;
-}
-
-.chart-container.expanded {
-    opacity: 1;
-    max-height: 800px;
-    padding: 0;
-}
-
-.dexscreener-chart-container {
-    width: 100%;
-    height: 500px;
+    min-height: 100vh;
     position: relative;
-    overflow: hidden;
-    border-radius: 8px;
+    padding: 2rem;
+    padding-bottom: 80px;
+    /* Space for taskbar */
+    background-image:
+        linear-gradient(0deg, transparent 24%, var(--scanline-color) 25%, var(--scanline-color) 26%, transparent 27%, transparent 74%, var(--scanline-color) 75%, var(--scanline-color) 76%, transparent 77%, transparent),
+        linear-gradient(90deg, transparent 24%, rgba(0, 255, 0, 0.02) 25%, rgba(0, 255, 0, 0.02) 26%, transparent 27%, transparent 74%, rgba(0, 255, 0, 0.02) 75%, rgba(0, 255, 0, 0.02) 76%, transparent 77%, transparent);
+    background-size: 4px 4px;
 }
 
-.dexscreener-chart-iframe {
-    width: 100%;
-    height: 100%;
-    border: none;
+/* The screen flicker animation */
+.app::before {
+    content: " ";
     display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: rgba(18, 16, 16, 0.1);
+    opacity: 0;
+    z-index: 2;
+    pointer-events: none;
+    animation: flicker 0.15s infinite;
 }
 
-.chart-fallback {
-    padding: 12px;
-    text-align: center;
-    background: #f9fafb;
-    border-top: 1px solid #e5e7eb;
+@keyframes flicker {
+    0% {
+        opacity: 0.02;
+    }
+
+    50% {
+        opacity: 0.05;
+    }
+
+    100% {
+        opacity: 0.02;
+    }
 }
 
-.chart-fallback p {
-    margin: 0;
+/* --- Typography --- */
+h1,
+h2,
+h3 {
+    text-transform: uppercase;
+    text-shadow: var(--terminal-glow);
+    font-weight: normal;
+    letter-spacing: 2px;
 }
 
-.chart-link {
-    color: #667eea;
+a {
+    color: var(--terminal-green);
     text-decoration: none;
-    font-weight: 600;
-    font-size: 0.9rem;
-    transition: color 0.2s;
+    border-bottom: 1px dashed var(--terminal-green);
 }
 
-.chart-link:hover {
-    color: #5568d3;
-    text-decoration: underline;
+a:hover {
+    background: var(--terminal-green);
+    color: #000;
 }
 
-.api-links {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid #e5e7eb;
+/* --- Retro Window Containers (Like Image 3) --- */
+.console-window {
+    border: 2px solid var(--terminal-green);
+    background: rgba(0, 10, 0, 0.9);
+    margin-bottom: 2rem;
+    box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+    position: relative;
 }
 
-.link-button {
-    display: inline-block;
-    padding: 8px 16px;
-    background: #667eea;
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    transition: background 0.2s;
-}
-
-.link-button:hover {
-    background: #5568d3;
-}
-
-.toggle-button {
-    padding: 8px 16px;
-    background: #e5e7eb;
-    color: #333;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.toggle-button:hover {
-    background: #d1d5db;
-}
-
-.price-history-section {
-    margin-top: 24px;
-    padding-top: 24px;
-    border-top: 2px solid #e5e7eb;
-}
-
-.price-chart {
-    margin-bottom: 20px;
-    background: #f9fafb;
-    padding: 20px;
-    border-radius: 8px;
-}
-
-.chart-header {
+/* The header bar of the window */
+.window-header {
+    background: var(--terminal-green);
+    color: #000;
+    padding: 4px 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
+    font-weight: bold;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--terminal-green);
 }
 
-.price-chart h3 {
-    margin: 0;
-    color: #333;
+.window-controls span {
+    margin-left: 10px;
+    cursor: pointer;
+}
+
+.window-content {
+    padding: 1.5rem;
+}
+
+/* --- Header & Layout --- */
+.main-header {
+    text-align: center;
+    border-bottom: 2px solid var(--terminal-green);
+    margin-bottom: 3rem;
+    padding-bottom: 1rem;
+}
+
+.system-status {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    font-size: 0.9rem;
+    color: var(--terminal-dim);
+    margin-top: 0.5rem;
+}
+
+.apis-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 2rem;
+}
+
+/* --- Buttons --- */
+button {
+    background: transparent;
+    border: 1px solid var(--terminal-green);
+    color: var(--terminal-green);
+    font-family: 'VT323', monospace;
     font-size: 1.2rem;
-}
-
-.timeframe-selector {
-    display: flex;
-    gap: 8px;
-}
-
-.timeframe-selector button {
-    padding: 6px 12px;
-    border: 1px solid #e5e7eb;
-    background: white;
-    color: #666;
-    border-radius: 6px;
-    font-size: 0.85rem;
+    padding: 0.5rem 1rem;
     cursor: pointer;
+    text-transform: uppercase;
     transition: all 0.2s;
+    box-shadow: 0 0 5px var(--terminal-dim);
 }
 
-.timeframe-selector button:hover {
-    background: #f3f4f6;
-    border-color: #667eea;
+button:hover {
+    background: var(--terminal-green);
+    color: #000;
+    box-shadow: 0 0 15px var(--terminal-green);
 }
 
-.timeframe-selector button.active {
-    background: #667eea;
-    color: white;
-    border-color: #667eea;
+.btn-glitch {
+    position: relative;
 }
 
-.chart-tooltip {
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    padding: 8px 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.tooltip-time {
-    margin: 0 0 4px 0;
-    font-size: 0.85rem;
-    color: #666;
-}
-
-.tooltip-price {
-    margin: 0;
-    font-size: 1rem;
-    color: #333;
-}
-
-.chart-stats {
+/* --- Metrics & Data --- */
+.data-row {
     display: flex;
-    gap: 24px;
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid #e5e7eb;
-    flex-wrap: wrap;
+    justify-content: space-between;
+    border-bottom: 1px dashed var(--terminal-dim);
+    padding: 0.5rem 0;
 }
 
-.stat-item {
+.data-label {
+    color: var(--terminal-dim);
+}
+
+.data-value {
+    text-shadow: 0 0 5px var(--terminal-green);
+}
+
+/* --- Input Forms --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
     display: flex;
-    gap: 8px;
+    justify-content: center;
     align-items: center;
+    z-index: 100;
 }
 
-.stat-label {
-    font-size: 0.85rem;
-    color: #666;
-    font-weight: 600;
+.form-grid {
+    display: grid;
+    gap: 1rem;
 }
 
-.stat-value {
-    font-size: 0.95rem;
-    color: #333;
-    font-weight: 700;
-}
-
-.no-chart-data {
-    padding: 40px;
-    text-align: center;
-    color: #999;
-    background: #f9fafb;
-    border-radius: 8px;
-}
-
-.price-stats {
-    display: flex;
-    gap: 24px;
-    flex-wrap: wrap;
-}
-
-.stat {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.stat label {
-    font-size: 0.85rem;
-    color: #666;
-    font-weight: 600;
-}
-
-.stat span {
+input,
+select,
+textarea {
+    background: #000;
+    border: 1px solid var(--terminal-dim);
+    color: var(--terminal-green);
+    font-family: 'VT323', monospace;
     font-size: 1.1rem;
-    color: #333;
-    font-weight: 700;
-}
-
-.stat span.positive {
-    color: #10b981;
-}
-
-.stat span.negative {
-    color: #ef4444;
-}
-
-.create-form-container {
-    background: white;
-    border-radius: 12px;
-    padding: 32px;
-    margin-bottom: 32px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.create-form h2 {
-    margin: 0 0 24px 0;
-    color: #333;
-    font-size: 1.8rem;
-}
-
-.form-group {
-    margin-bottom: 20px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 8px;
-    color: #333;
-    font-weight: 600;
-    font-size: 0.95rem;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
+    padding: 0.5rem;
     width: 100%;
-    padding: 10px 12px;
-    border: 2px solid #e5e7eb;
-    border-radius: 6px;
-    font-size: 1rem;
-    transition: border-color 0.2s;
-    font-family: inherit;
 }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
+input:focus,
+select:focus,
+textarea:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--terminal-green);
+    box-shadow: 0 0 8px var(--terminal-dim);
 }
 
-.form-group textarea {
-    resize: vertical;
-    min-height: 80px;
-}
-
-.form-help {
-    display: block;
-    margin-top: 4px;
-    font-size: 0.85rem;
-    color: #888;
-    font-style: italic;
-}
-
-.form-actions {
+/* --- Taskbar (Bottom of screen) --- */
+.taskbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: var(--terminal-green);
+    color: #000;
     display: flex;
-    gap: 12px;
-    margin-top: 24px;
+    align-items: center;
+    padding: 0 1rem;
+    z-index: 50;
+    justify-content: space-between;
+    font-weight: bold;
 }
 
-.submit-button {
-    flex: 1;
-    padding: 12px 24px;
-    background: #667eea;
-    color: white;
+.taskbar-items {
+    display: flex;
+    gap: 2rem;
+}
+
+.start-btn {
+    background: #000;
+    color: var(--terminal-green);
+    padding: 2px 10px;
     border: none;
-    border-radius: 6px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
 }
 
-.submit-button:hover {
-    background: #5568d3;
+/* --- Chart --- */
+.chart-frame {
+    margin-top: 1rem;
+    border: 1px solid var(--terminal-dim);
+    padding: 2px;
 }
 
-.cancel-button {
-    flex: 1;
-    padding: 12px 24px;
-    background: #e5e7eb;
-    color: #333;
-    border: none;
-    border-radius: 6px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.cancel-button:hover {
-    background: #d1d5db;
-}
-
-.chart-error {
-    padding: 20px;
-    text-align: center;
-    color: #999;
-    background: #f9fafb;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-}
-
-@media (max-width: 768px) {
-    .app {
-        padding: 12px;
-    }
-
-    .header h1 {
-        font-size: 2rem;
-    }
-
-    .api-card-header {
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    .api-links {
-        flex-direction: column;
-    }
-
-    .link-button,
-    .toggle-button {
-        width: 100%;
-        text-align: center;
-    }
-
-    .chart-svg {
-        max-width: 100%;
-    }
-
-    .dexscreener-chart-container {
-        height: 400px;
-    }
-
-    .chart-container.expanded {
-        max-height: 600px;
-    }
+/* Makes the chart look a bit more retro/washed out */
+.dexscreener-chart-iframe {
+    filter: grayscale(80%) sepia(100%) hue-rotate(50deg) saturate(300%) contrast(1.2);
+    width: 100%;
+    height: 300px;
 }
