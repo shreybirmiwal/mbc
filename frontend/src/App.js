@@ -122,7 +122,48 @@ function App() {
   );
 }
 
+function DexScreenerChart({ tokenAddress }) {
+  if (!tokenAddress) {
+    return (
+      <div className="chart-error">
+        <p>Token address not available</p>
+      </div>
+    );
+  }
+
+  // DexScreener embed URL for Base network
+  // Note: DexScreener supports token addresses directly on their platform
+  // The embed parameter enables embedding mode
+  const chartUrl = `https://dexscreener.com/base/${tokenAddress}?embed=1&theme=dark&trades=0&info=0`;
+
+  return (
+    <div className="dexscreener-chart-container">
+      <iframe
+        src={chartUrl}
+        title="DexScreener Chart"
+        className="dexscreener-chart-iframe"
+        frameBorder="0"
+        allow="clipboard-write"
+        loading="lazy"
+      />
+      <div className="chart-fallback">
+        <p>
+          <a
+            href={`https://dexscreener.com/base/${tokenAddress}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="chart-link"
+          >
+            View on DexScreener →
+          </a>
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function APICard({ api, details }) {
+  const [showChart, setShowChart] = useState(false);
   const apiUrl = `${API_BASE_URL}${api.endpoint}`;
   const flaunchLink = api.token?.view_on_flaunch || details?.links?.flaunch;
   const tokenAddress = api.token?.address || details?.token_address;
@@ -212,6 +253,24 @@ function APICard({ api, details }) {
               </span>
             </div>
           </div>
+
+          {/* DexScreener Chart Section */}
+          {tokenAddress && (
+            <div className="chart-section">
+              <button
+                className="chart-toggle-button"
+                onClick={() => setShowChart(!showChart)}
+                type="button"
+              >
+                {showChart ? '▼ Hide Chart' : '📈 View Chart on DexScreener'}
+              </button>
+              {showChart && (
+                <div className={`chart-container ${showChart ? 'expanded' : ''}`}>
+                  <DexScreenerChart tokenAddress={tokenAddress} />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
