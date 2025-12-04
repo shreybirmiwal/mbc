@@ -1,13 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
 :root {
-    /* Changed from #00ff41 (Electric) to #4af626 (IBM Phosphor) - warmer and easier on eyes */
-    --terminal-green: #4af626;
-    --terminal-dim: #2d8f3b;
-    --terminal-bg: #050505;
-    /* Reduced glow intensity for eye comfort */
-    --terminal-glow: 0 0 4px rgba(74, 246, 38, 0.4);
-    --scanline-color: rgba(0, 0, 0, 0.3);
+    --terminal-green: #00ff41;
+    --terminal-dim: #008f11;
+    --terminal-bg: #0d0d0d;
+    --terminal-glow: 0 0 10px rgba(0, 255, 65, 0.5), 0 0 2px rgba(0, 255, 65, 0.3);
+    --scanline-color: rgba(0, 0, 0, 0.5);
 }
 
 body {
@@ -24,7 +22,7 @@ body {
 .app {
     min-height: 100vh;
     position: relative;
-    padding: 2rem;
+    padding: 1rem;
     padding-bottom: 80px;
     /* Made background pattern slightly more subtle */
     background-image:
@@ -79,8 +77,8 @@ h3 {
     border: 1px solid var(--terminal-green);
     /* Thinner border */
     background: rgba(5, 15, 5, 0.92);
-    margin-bottom: 2.5rem;
-    /* More space between full-width nodes */
+    margin-bottom: 0.75rem;
+    /* Less space between nodes */
     box-shadow: 0 0 10px rgba(74, 246, 38, 0.1);
     /* Reduced bloom */
     position: relative;
@@ -107,19 +105,36 @@ h3 {
 }
 
 .window-content {
-    padding: 2rem;
+    padding: 1.5rem;
     /* More internal padding */
     flex-grow: 1;
     display: flex;
     flex-direction: column;
 }
 
+/* Side-by-side layout for chart and info */
+.card-layout {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+}
+
+.chart-section {
+    flex: 1;
+    min-width: 0;
+}
+
+.info-section {
+    flex: 1;
+    min-width: 0;
+}
+
 /* --- Header --- */
 .main-header {
     text-align: center;
     border-bottom: 1px solid var(--terminal-green);
-    margin-bottom: 4rem;
-    padding-bottom: 1.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
 }
 
 .system-status {
@@ -136,11 +151,11 @@ h3 {
     /* UPDATED: Full Width Single Column */
     display: flex;
     flex-direction: column;
-    max-width: 1000px;
-    /* Prevents it from being too wide on 4k screens */
+    max-width: 95%;
+    /* Use more of the screen width */
     margin: 0 auto;
     /* Centers the column */
-    gap: 3rem;
+    gap: 0.5rem;
 }
 
 /* --- Buttons --- */
@@ -179,8 +194,8 @@ button:hover {
 
 /* --- Data & Access Point --- */
 .access-point-container {
-    margin-bottom: 2rem;
-    padding-bottom: 1.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
     border-bottom: 1px solid var(--terminal-dim);
 }
 
@@ -206,7 +221,7 @@ button:hover {
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px dashed var(--terminal-dim);
-    padding: 0.8rem 0;
+    padding: 0.5rem 0;
 }
 
 .data-label {
@@ -220,28 +235,20 @@ button:hover {
 }
 
 /* --- Chart --- */
-.chart-section {
-    margin-top: 2rem;
-}
-
-.chart-label {
-    font-size: 0.9rem;
-    color: var(--terminal-dim);
-    margin-bottom: 8px;
-}
-
 .chart-frame {
     border: 1px solid var(--terminal-dim);
     padding: 4px;
     background: #000;
+    height: 100%;
+    display: flex;
 }
 
 .dexscreener-chart-iframe {
     /* Adjusted filter to match the new calmer green */
     filter: grayscale(100%) sepia(100%) hue-rotate(85deg) saturate(400%) contrast(0.9) brightness(0.9);
     width: 100%;
-    height: 400px;
-    /* Taller chart since we have full width */
+    height: 300px;
+    /* Reduced height for side-by-side layout */
     display: block;
     opacity: 0.85;
     /* Makes chart slightly dimmer to match aesthetic */

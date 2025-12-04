@@ -163,74 +163,69 @@ function ConsoleCard({ api, details, index }) {
 
   return (
     <div className="console-window">
-      <div className="window-header">
-        <span>> BAZAAR_NODE_{index + 1}</span>
-        <div className="window-controls">
-          <span>_</span>
-          <span>□</span>
-          <span>X</span>
-        </div>
-      </div>
-
       <div className="window-content">
-        <h2 style={{ marginTop: 0, marginBottom: '0.5rem' }}>{tokenName}</h2>
-
-        {/* Full URL Access Point */}
-        <div className="access-point-container">
-          <div className="data-label">ACCESS_POINT:</div>
-          <div className="url-row">
-            <span className="url-text">{fullUrl}</span>
-            <button className="copy-btn" onClick={() => handleCopy(fullUrl, 'URL')}>
-              [COPY]
-            </button>
-          </div>
-        </div>
-
-        <div className="data-display">
-          <div className="data-row">
-            <span className="data-label">STATUS</span>
-            <span className="data-value" style={{ color: api.status === 'active' ? '#0f0' : 'red' }}>
-              [{api.status.toUpperCase()}]
-            </span>
-          </div>
-
-          {api.token && (
-            <>
-              <div className="data-row">
-                <span className="data-label">TOKEN_PRICE</span>
-                <span className="data-value">{formatCurrency(details?.pricing?.token_price_usd)}</span>
+        <div className="card-layout">
+          {/* Left Side - Chart */}
+          {tokenAddress && (
+            <div className="chart-section">
+              <div className="chart-frame">
+                <iframe
+                  src={`https://dexscreener.com/base/${tokenAddress}?embed=1&chartOnly=1&theme=dark&trades=0&info=0`}
+                  title="DexScreener Chart"
+                  className="dexscreener-chart-iframe"
+                  frameBorder="0"
+                />
               </div>
-
-              <div className="data-row">
-                <span className="data-label">CONTRACT</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span className="data-value" style={{ fontSize: '0.8em' }}>
-                    {tokenAddress ? `${tokenAddress.slice(0, 6)}...${tokenAddress.slice(-4)}` : 'NULL'}
-                  </span>
-                  {tokenAddress && (
-                    <button className="copy-btn" onClick={() => handleCopy(tokenAddress, 'CONTRACT ADDRESS')}>
-                      [COPY]
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Chart Always Visible */}
-              {tokenAddress && (
-                <div className="chart-section">
-                  <div className="chart-label">> LIVE_MARKET_DATA_STREAM</div>
-                  <div className="chart-frame">
-                    <iframe
-                      src={`https://dexscreener.com/base/${tokenAddress}?embed=1&chartOnly=1&theme=dark&trades=0&info=0`}
-                      title="DexScreener Chart"
-                      className="dexscreener-chart-iframe"
-                      frameBorder="0"
-                    />
-                  </div>
-                </div>
-              )}
-            </>
+            </div>
           )}
+
+          {/* Right Side - Info */}
+          <div className="info-section">
+            <h2 style={{ marginTop: 0, marginBottom: '1rem' }}>{tokenName}</h2>
+
+            {/* Full URL Access Point */}
+            <div className="access-point-container">
+              <div className="data-label">ACCESS_POINT:</div>
+              <div className="url-row">
+                <span className="url-text">{fullUrl}</span>
+                <button className="copy-btn" onClick={() => handleCopy(fullUrl, 'URL')}>
+                  [COPY]
+                </button>
+              </div>
+            </div>
+
+            <div className="data-display">
+              <div className="data-row">
+                <span className="data-label">STATUS</span>
+                <span className="data-value" style={{ color: api.status === 'active' ? '#0f0' : 'red' }}>
+                  [{api.status.toUpperCase()}]
+                </span>
+              </div>
+
+              {api.token && (
+                <>
+                  <div className="data-row">
+                    <span className="data-label">TOKEN_PRICE</span>
+                    <span className="data-value">{formatCurrency(details?.pricing?.token_price_usd)}</span>
+                  </div>
+
+                  <div className="data-row">
+                    <span className="data-label">CONTRACT</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span className="data-value" style={{ fontSize: '0.8em' }}>
+                        {tokenAddress ? `${tokenAddress.slice(0, 6)}...${tokenAddress.slice(-4)}` : 'NULL'}
+                      </span>
+                      {tokenAddress && (
+                        <button className="copy-btn" onClick={() => handleCopy(tokenAddress, 'CONTRACT ADDRESS')}>
+                          [COPY]
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
