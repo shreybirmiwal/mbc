@@ -14,7 +14,7 @@ function AsciiGlobe() {
     let lastTime = 0;
     const targetFPS = 20;
     const frameInterval = 1000 / targetFPS;
-    
+
     const animate = (currentTime) => {
       if (currentTime - lastTime >= frameInterval) {
         setFrame(prev => (prev + 2) % 360);
@@ -30,49 +30,49 @@ function AsciiGlobe() {
     const width = 30;
     const height = 15;
     const radius = 6;
-    
+
     const angleX = frame * Math.PI / 180;
     const angleY = frame * 0.3 * Math.PI / 180;
-    
+
     const output = Array(height).fill(null).map(() => Array(width).fill(' '));
     const zbuffer = Array(height).fill(null).map(() => Array(width).fill(-Infinity));
-    
+
     // Draw sphere
     for (let i = 0; i < height; i++) {
       for (let j = 0; j < width; j++) {
         const x = (j - width / 2) / 2;
         const y = (i - height / 2);
         const z2 = radius * radius - x * x - y * y;
-        
+
         if (z2 >= 0) {
           const z = Math.sqrt(z2);
-          
+
           // Rotate
           const rx = x;
           const ry = y * Math.cos(angleY) - z * Math.sin(angleY);
           const rz = y * Math.sin(angleY) + z * Math.cos(angleY);
-          
+
           const rrx = rx * Math.cos(angleX) + rz * Math.sin(angleX);
           const rrz = -rx * Math.sin(angleX) + rz * Math.cos(angleX);
-          
+
           // Simple continents pattern (rough Earth-like)
           const lat = Math.asin(ry / radius);
           const lon = Math.atan2(rrx, rrz);
-          
+
           // Create landmasses pattern
-          const pattern = Math.sin(lat * 3) * Math.cos(lon * 4) + 
-                         Math.sin(lat * 5) * Math.sin(lon * 2) +
-                         Math.cos(lat * 2) * Math.sin(lon * 3);
-          
+          const pattern = Math.sin(lat * 3) * Math.cos(lon * 4) +
+            Math.sin(lat * 5) * Math.sin(lon * 2) +
+            Math.cos(lat * 2) * Math.sin(lon * 3);
+
           // Lighting
           const nx = rrx / radius;
           const ny = ry / radius;
           const nz = rrz / radius;
           const light = Math.max(0, nx * 0.7 + ny * 0.3 + nz * 0.6);
-          
+
           const isLand = pattern > 0.3;
           let char;
-          
+
           if (isLand) {
             // Land with shading
             if (light > 0.7) char = '#';
@@ -86,7 +86,7 @@ function AsciiGlobe() {
             else if (light > 0.3) char = '=';
             else char = '.';
           }
-          
+
           if (rrz > zbuffer[i][j]) {
             zbuffer[i][j] = rrz;
             output[i][j] = char;
@@ -94,13 +94,13 @@ function AsciiGlobe() {
         }
       }
     }
-    
+
     return output.map(row => row.join('')).join('\n');
   };
 
   return (
     <pre className="ascii-globe">
-      {renderGlobe()}
+      {/* {renderGlobe()} */}
     </pre>
   );
 }
@@ -194,8 +194,8 @@ function App() {
     <div className="app">
       <header className="main-header">
         <div className="ascii-art-banner">
-          <pre className="ascii-banner-text">
-{`                    %######*****************************************                                                     
+          {/* <pre className="ascii-banner-text">
+            {`                    %######*****************************************                                                     
                     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%##################*********                                    
                      %%*+=-=#%%%#+----+%%%%#----=%%%%%+-===*#%%%#%%%%%%%#%#%#%####%%%%%#####******                       
                      %*----*%%%%#=----#%%%%*----+%%%%%=----+%%%#=---*%%%*----+%%%%%#%%%%%%%%%%%%%%%%%###**               
@@ -241,10 +241,10 @@ function App() {
        +=======-=======-::::---::::---::+#########################################################################=              
           ++============---::::::::::--=##########################################################################               
                +======   :::-:::::::::     . ..                                                             .  .`}
-          </pre>
+          </pre> */}
         </div>
         <div className="header-content">
-          <AsciiGlobe />
+          {/* <AsciiGlobe /> */}
           <div className="header-text">
             <h1>BAZAAR // MARKETPLACE</h1>
             <div className="system-status">

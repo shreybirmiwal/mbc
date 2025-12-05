@@ -324,22 +324,48 @@ class FlaunchTokenStore:
                 price_obj = data.get("price", {})
                 token_price_usd = float(price_obj.get("priceUSDC", 0))
                 
+                # If current price is 0, try to get from most recent historical data
+                if token_price_usd == 0:
+                    price_history = data.get("priceHistory", {})
+                    
+                    # Try hourly data first (most recent)
+                    hourly = price_history.get("hourly", [])
+                    if hourly and len(hourly) > 0:
+                        # Get the most recent hourly price (first item)
+                        recent_hour = hourly[0]
+                        token_price_usd = float(recent_hour.get("closeUSDC", 0))
+                        print(f"[PRICE] Using hourly close price: ${token_price_usd:.10f}")
+                    
+                    # If still 0, try daily data
+                    if token_price_usd == 0:
+                        daily = price_history.get("daily", [])
+                        if daily and len(daily) > 0:
+                            # Get the most recent daily price (first item)
+                            recent_day = daily[0]
+                            token_price_usd = float(recent_day.get("closeUSDC", 0))
+                            print(f"[PRICE] Using daily close price: ${token_price_usd:.10f}")
+                
                 # Get volumes from volume object
                 volume_obj = data.get("volume", {})
                 volume_24h_usd = float(volume_obj.get("volumeUSDC24h", 0))
                 volume_7d_usd = float(volume_obj.get("volumeUSDC7d", 0))
                 
-                #print(f"[PRICE] Token: ${token_price_usd:.8f} USD, Vol24h: ${volume_24h_usd:.2f}, Vol7d: ${volume_7d_usd:.2f}")
+                print(f"[PRICE] Token: ${token_price_usd:.10f} USD, Vol24h: ${volume_24h_usd:.2f}, Vol7d: ${volume_7d_usd:.2f}")
                 
                 return {
                     "token_price_usd": token_price_usd,
                     "volume_24h_usd": volume_24h_usd,
                     "volume_7d_usd": volume_7d_usd
                 }
+            else:
+                print(f"[PRICE] API returned status code {response.status_code}")
+                print(f"[PRICE] Response: {response.text}")
             return None
             
         except Exception as e:
             print(f"[PRICE] Error fetching price: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def sync_prices(self):

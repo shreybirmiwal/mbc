@@ -174,7 +174,7 @@ h3 {
     font-size: 10px;
     line-height: 1.1;
     color: var(--terminal-green);
-    text-shadow: 
+    text-shadow:
         0 0 5px rgba(0, 255, 65, 0.8),
         0 0 10px rgba(0, 255, 65, 0.4);
     margin: 0;
@@ -188,15 +188,18 @@ h3 {
 }
 
 @keyframes globe-pulse {
-    0%, 100% {
+
+    0%,
+    100% {
         opacity: 0.9;
-        text-shadow: 
+        text-shadow:
             0 0 5px rgba(0, 255, 65, 0.8),
             0 0 10px rgba(0, 255, 65, 0.4);
     }
+
     50% {
         opacity: 1;
-        text-shadow: 
+        text-shadow:
             0 0 8px rgba(0, 255, 65, 1),
             0 0 15px rgba(0, 255, 65, 0.6);
     }
@@ -207,11 +210,11 @@ h3 {
         flex-direction: column;
         gap: 1rem;
     }
-    
+
     .ascii-globe {
         font-size: 8px;
     }
-    
+
     .ascii-banner-text {
         font-size: 3px;
     }
