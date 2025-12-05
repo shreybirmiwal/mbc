@@ -36,7 +36,5 @@
       "last 1 safari version"
     ]
   },
-  "devDependencies": {
-    "http-proxy-middleware": "^3.0.5"
-  }
+  "proxy": "http://127.0.0.1:5000"
 }
