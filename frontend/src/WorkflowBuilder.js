@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './WorkflowBuilder.css';
 
-const API_BASE_URL = 'http://127.0.0.1:5000';
+const API_BASE_URL = ''; // Use proxy - requests will be forwarded to backend
 
 function WorkflowBuilder() {
   const [apis, setApis] = useState([]);

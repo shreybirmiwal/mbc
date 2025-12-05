@@ -4,7 +4,7 @@ import WorkflowBuilder from './WorkflowBuilder';
 import bazaarAscii from './bazaar.txt';
 import craneAscii from './crane-ascii.txt';
 
-const API_BASE_URL = 'http://127.0.0.1:5000';
+const API_BASE_URL = ''; // Use proxy - requests will be forwarded to backend
 const DEFAULT_PRICE_MULTIPLIER = 10000;
 const DEFAULT_STARTING_MARKET_CAP = '1000000';
 
