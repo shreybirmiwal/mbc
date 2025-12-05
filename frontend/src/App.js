@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
+import WorkflowBuilder from './WorkflowBuilder';
 
 const API_BASE_URL = 'http://127.0.0.1:5000';
 const DEFAULT_PRICE_MULTIPLIER = 10000;
@@ -111,6 +112,7 @@ function App() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [apiDetails, setApiDetails] = useState({});
   const [time, setTime] = useState(new Date().toLocaleTimeString());
+  const [activeTab, setActiveTab] = useState('marketplace'); // 'marketplace' or 'workflow'
 
   // Real-time clock for the taskbar
   useEffect(() => {
@@ -254,10 +256,27 @@ function App() {
             </div>
           </div>
         </div>
+        
+        {/* Tab Navigation */}
+        <div className="tab-navigation">
+          <button 
+            className={`tab-btn ${activeTab === 'marketplace' ? 'active' : ''}`}
+            onClick={() => setActiveTab('marketplace')}
+          >
+            [ MARKETPLACE ]
+          </button>
+          <button 
+            className={`tab-btn ${activeTab === 'workflow' ? 'active' : ''}`}
+            onClick={() => setActiveTab('workflow')}
+          >
+            [ WORKFLOW BUILDER ]
+          </button>
+        </div>
       </header>
 
       {/* Main Content Area */}
-      <div className="apis-grid">
+      {activeTab === 'marketplace' && (
+        <div className="apis-grid">
         {apis.length === 0 ? (
           <div className="console-window">
             <div className="window-header">SYSTEM_MSG</div>
@@ -276,7 +295,13 @@ function App() {
             />
           ))
         )}
-      </div>
+        </div>
+      )}
+
+      {/* Workflow Builder Tab */}
+      {activeTab === 'workflow' && (
+        <WorkflowBuilder />
+      )}
 
       {/* Taskbar */}
       <div className="taskbar">

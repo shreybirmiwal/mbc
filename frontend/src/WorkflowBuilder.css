@@ -1,0 +1,340 @@
+.workflow-builder {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 80px);
+  padding: 1rem;
+  gap: 1rem;
+}
+
+.workflow-header {
+  border-bottom: 1px solid var(--terminal-green);
+  padding-bottom: 1rem;
+}
+
+.workflow-header h2 {
+  margin: 0 0 0.5rem 0;
+  text-align: center;
+}
+
+.workflow-stats {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  font-size: 1rem;
+  color: var(--terminal-dim);
+}
+
+.workflow-container {
+  display: flex;
+  gap: 1rem;
+  flex: 1;
+  min-height: 0;
+}
+
+/* API Palette */
+.api-palette {
+  width: 280px;
+  border: 1px solid var(--terminal-green);
+  background: rgba(5, 15, 5, 0.92);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.palette-header {
+  background: var(--terminal-green);
+  color: #000;
+  padding: 8px 15px;
+  font-weight: bold;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--terminal-green);
+}
+
+.palette-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.palette-item {
+  border: 1px solid var(--terminal-dim);
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.palette-item:hover {
+  border-color: var(--terminal-green);
+  background: rgba(0, 255, 65, 0.1);
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+}
+
+.palette-item-name {
+  font-size: 1.1rem;
+  margin-bottom: 0.3rem;
+  color: var(--terminal-green);
+}
+
+.palette-item-price {
+  font-size: 0.9rem;
+  color: var(--terminal-dim);
+  margin-bottom: 0.3rem;
+}
+
+.palette-item-hint {
+  font-size: 0.8rem;
+  color: var(--terminal-dim);
+  opacity: 0.7;
+}
+
+.palette-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--terminal-dim);
+}
+
+/* Canvas */
+.workflow-canvas {
+  flex: 1;
+  border: 1px solid var(--terminal-green);
+  background: rgba(5, 15, 5, 0.92);
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+}
+
+.canvas-empty-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: var(--terminal-dim);
+  pointer-events: none;
+}
+
+.connections-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.connections-layer circle {
+  pointer-events: all;
+}
+
+/* Workflow Nodes */
+.workflow-node {
+  position: absolute;
+  width: 280px;
+  border: 2px solid var(--terminal-dim);
+  background: rgba(0, 0, 0, 0.9);
+  cursor: move;
+  z-index: 10;
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.workflow-node:hover {
+  border-color: var(--terminal-green);
+  box-shadow: 0 0 15px rgba(0, 255, 65, 0.4);
+}
+
+.workflow-node.selected {
+  border-color: var(--terminal-green);
+  box-shadow: 0 0 20px rgba(0, 255, 65, 0.6);
+  border-width: 3px;
+}
+
+.node-header {
+  background: var(--terminal-green);
+  color: #000;
+  padding: 6px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  font-size: 0.95rem;
+  border-bottom: 2px solid var(--terminal-green);
+}
+
+.node-remove {
+  background: #000;
+  color: var(--terminal-green);
+  border: 1px solid #000;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.node-remove:hover {
+  background: #ff0000;
+  color: #000;
+  border-color: #ff0000;
+}
+
+.node-body {
+  padding: 1rem;
+}
+
+.node-info {
+  margin-bottom: 0.75rem;
+}
+
+.node-endpoint {
+  font-size: 0.9rem;
+  color: var(--terminal-dim);
+  margin-bottom: 0.3rem;
+}
+
+.node-price {
+  font-size: 1rem;
+  color: var(--terminal-green);
+  font-weight: bold;
+}
+
+/* Ports */
+.node-ports {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--terminal-dim);
+}
+
+.input-ports,
+.output-ports {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.port {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  transition: all 0.2s;
+}
+
+.port:hover {
+  background: rgba(0, 255, 65, 0.1);
+}
+
+.port-dot {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--terminal-green);
+  border-radius: 50%;
+  background: rgba(0, 255, 65, 0.3);
+  transition: all 0.2s;
+}
+
+.port:hover .port-dot {
+  background: var(--terminal-green);
+  box-shadow: 0 0 8px var(--terminal-green);
+}
+
+.port-label {
+  font-size: 0.85rem;
+  color: var(--terminal-dim);
+  text-transform: uppercase;
+}
+
+.input-port {
+  flex-direction: row;
+}
+
+.output-port {
+  flex-direction: row-reverse;
+}
+
+/* Controls */
+.workflow-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  border-top: 1px solid var(--terminal-green);
+}
+
+.control-btn {
+  background: rgba(0, 0, 0, 0.7);
+  border: 2px solid var(--terminal-green);
+  color: var(--terminal-green);
+  font-family: 'VT323', monospace;
+  font-size: 1.3rem;
+  padding: 0.75rem 2rem;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.2s;
+  font-weight: bold;
+}
+
+.control-btn:hover {
+  background: var(--terminal-green);
+  color: #000;
+  box-shadow: 0 0 20px var(--terminal-green);
+}
+
+.execute-btn {
+  border-color: #00ff00;
+  color: #00ff00;
+}
+
+.execute-btn:hover {
+  background: #00ff00;
+  box-shadow: 0 0 20px #00ff00;
+}
+
+.clear-btn {
+  border-color: #ff0000;
+  color: #ff0000;
+}
+
+.clear-btn:hover {
+  background: #ff0000;
+  box-shadow: 0 0 20px #ff0000;
+}
+
+.connecting-indicator {
+  color: var(--terminal-green);
+  font-size: 1.1rem;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Scrollbar styling */
+.palette-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.palette-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.palette-content::-webkit-scrollbar-thumb {
+  background: var(--terminal-dim);
+  border: 1px solid var(--terminal-green);
+}
+
+.palette-content::-webkit-scrollbar-thumb:hover {
+  background: var(--terminal-green);
+}

@@ -136,6 +136,42 @@ h3 {
     padding-bottom: 1rem;
 }
 
+/* Tab Navigation */
+.tab-navigation {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px dashed var(--terminal-dim);
+}
+
+.tab-btn {
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid var(--terminal-dim);
+    color: var(--terminal-dim);
+    font-family: 'VT323', monospace;
+    font-size: 1.3rem;
+    padding: 0.75rem 2rem;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    font-weight: bold;
+}
+
+.tab-btn:hover {
+    border-color: var(--terminal-green);
+    color: var(--terminal-green);
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+}
+
+.tab-btn.active {
+    background: var(--terminal-green);
+    color: #000;
+    border-color: var(--terminal-green);
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.6);
+}
+
 .ascii-art-banner {
     width: 100%;
     overflow: hidden;
