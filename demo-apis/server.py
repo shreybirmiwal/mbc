@@ -12,8 +12,11 @@ app = Flask(__name__)
 # export OPENROUTER_API_KEY="sk-or-..."
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-YOUR_SITE_URL = "http://localhost:5000" # Optional, for OpenRouter rankings
-YOUR_SITE_NAME = "Simple Local Server"   # Optional, for OpenRouter rankings
+# Use Vercel URL in production, localhost in development
+YOUR_SITE_URL = os.getenv("VERCEL_URL", "http://localhost:5000")
+if YOUR_SITE_URL and not YOUR_SITE_URL.startswith("http"):
+    YOUR_SITE_URL = f"https://{YOUR_SITE_URL}"
+YOUR_SITE_NAME = os.getenv("SITE_NAME", "Demo APIs Server")   # Optional, for OpenRouter rankings
 
 def call_openrouter(model_name, user_prompt):
     """
