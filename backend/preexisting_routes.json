@@ -10,7 +10,42 @@
         "symbol": "WEAAPI",
         "token_uri": "https://flaunch.gg/base/coin/0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a",
         "tx_hash": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-        "flaunch_link": "https://flaunch.gg/base/coin/0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a"
+        "flaunch_link": "https://flaunch.gg/base/coin/0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a",
+        "input_format": {
+            "query_params": {
+                "location": {
+                    "type": "string",
+                    "required": true,
+                    "description": "City name or zip code"
+                },
+                "units": {
+                    "type": "string",
+                    "required": false,
+                    "description": "Temperature units (celsius or fahrenheit)"
+                }
+            }
+        },
+        "output_format": {
+            "type": "object",
+            "properties": {
+                "temperature": {
+                    "type": "number",
+                    "description": "Current temperature"
+                },
+                "condition": {
+                    "type": "string",
+                    "description": "Weather condition (sunny, cloudy, rainy, etc)"
+                },
+                "humidity": {
+                    "type": "number",
+                    "description": "Humidity percentage"
+                },
+                "wind_speed": {
+                    "type": "number",
+                    "description": "Wind speed in mph or km/h"
+                }
+            }
+        }
     },
     {
         "name": "Example Stock API",
@@ -23,7 +58,37 @@
         "symbol": "STOAPI",
         "token_uri": "https://flaunch.gg/base/coin/0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a",
         "tx_hash": "0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321",
-        "flaunch_link": "https://flaunch.gg/base/coin/0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a"
+        "flaunch_link": "https://flaunch.gg/base/coin/0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a",
+        "input_format": {
+            "query_params": {
+                "symbol": {
+                    "type": "string",
+                    "required": true,
+                    "description": "Stock ticker symbol (e.g., AAPL, GOOGL)"
+                }
+            }
+        },
+        "output_format": {
+            "type": "object",
+            "properties": {
+                "symbol": {
+                    "type": "string",
+                    "description": "Stock ticker symbol"
+                },
+                "price": {
+                    "type": "number",
+                    "description": "Current stock price"
+                },
+                "change": {
+                    "type": "number",
+                    "description": "Price change today"
+                },
+                "volume": {
+                    "type": "number",
+                    "description": "Trading volume"
+                }
+            }
+        }
     },
     {
         "name": "shreyTest",
