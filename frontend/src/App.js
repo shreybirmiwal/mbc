@@ -314,9 +314,12 @@ function App() {
 
 // Reusable Console Window Component
 function ConsoleCard({ api, details, index }) {
-  const fullUrl = `${API_BASE_URL}${api.endpoint}`;
+  // Construct full URL with backend server address
+  const backendPort = 5000;
+  const fullUrl = `http://127.0.0.1:${backendPort}${api.endpoint}`;
   const tokenAddress = api.token?.address || details?.token_address;
   const tokenName = details?.api_name || api.name;
+  const flaunchLink = api.flaunch_link || details?.flaunch_link;
 
   const formatCurrency = (value) => {
     if (!value) return '$0.0000000000';
@@ -358,9 +361,25 @@ function ConsoleCard({ api, details, index }) {
               </div>
             )}
 
+            {/* Flaunch Link */}
+            {flaunchLink && (
+              <div className="access-point-container" style={{ marginBottom: '1rem' }}>
+                <div className="data-label">FLAUNCH_LINK:</div>
+                <div className="url-row">
+                  <a href={flaunchLink} target="_blank" rel="noopener noreferrer" className="url-text" style={{ color: '#0f0', textDecoration: 'underline' }}>
+                    {flaunchLink}
+                  </a>
+                  <button className="copy-btn" onClick={() => handleCopy(flaunchLink, 'FLAUNCH LINK')}>
+                    [COPY]
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Full URL Access Point */}
             <div className="access-point-container">
-              <div className="data-label">ACCESS_POINT:</div>
+              <div className="data-label">DONT:</div>
+              <div className="data-label" style={{ marginTop: '0.5rem' }}>ACCESS_POINT:</div>
               <div className="url-row">
                 <span className="url-text">{fullUrl}</span>
                 <button className="copy-btn" onClick={() => handleCopy(fullUrl, 'URL')}>
