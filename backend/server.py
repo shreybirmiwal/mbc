@@ -140,7 +140,9 @@ class FlaunchTokenStore:
                     "tx_hash": route.get("tx_hash"),
                     "flaunch_link": route.get("flaunch_link", f"https://flaunch.gg/base/coin/{route['token_address']}"),
                     "created_at": route.get("created_at", time.time()),
-                    "preexisting": True  # Mark as pre-existing
+                    "preexisting": True,  # Mark as pre-existing
+                    "input_format": route.get("input_format", {}),
+                    "output_format": route.get("output_format", {})
                 }
                 
                 # Set price multiplier (can be customized per API)
