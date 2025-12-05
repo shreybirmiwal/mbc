@@ -436,49 +436,258 @@ function CreateAPIForm({ onSubmit, onCancel }) {
     starting_market_cap: DEFAULT_STARTING_MARKET_CAP
   });
 
+  const [inputParams, setInputParams] = useState([]);
+  const [outputParams, setOutputParams] = useState([]);
+  const [showSchemaForm, setShowSchemaForm] = useState(false);
+
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
+  const addInputParam = () => {
+    setInputParams([...inputParams, { name: '', type: 'string', required: false, description: '' }]);
+  };
+
+  const removeInputParam = (index) => {
+    setInputParams(inputParams.filter((_, i) => i !== index));
+  };
+
+  const updateInputParam = (index, field, value) => {
+    const updated = [...inputParams];
+    updated[index][field] = value;
+    setInputParams(updated);
+  };
+
+  const addOutputParam = () => {
+    setOutputParams([...outputParams, { name: '', type: 'string', description: '' }]);
+  };
+
+  const removeOutputParam = (index) => {
+    setOutputParams(outputParams.filter((_, i) => i !== index));
+  };
+
+  const updateOutputParam = (index, field, value) => {
+    const updated = [...outputParams];
+    updated[index][field] = value;
+    setOutputParams(updated);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    // Build input/output format from params
+    const input_format = {};
+    const output_format = {};
+
+    if (inputParams.length > 0) {
+      if (formData.method === 'GET') {
+        input_format.query_params = {};
+        inputParams.forEach(param => {
+          if (param.name) {
+            input_format.query_params[param.name] = {
+              type: param.type,
+              required: param.required,
+              description: param.description
+            };
+          }
+        });
+      } else {
+        input_format.body = {
+          type: 'object',
+          properties: {}
+        };
+        inputParams.forEach(param => {
+          if (param.name) {
+            input_format.body.properties[param.name] = {
+              type: param.type,
+              description: param.description
+            };
+          }
+        });
+        if (inputParams.some(p => p.required)) {
+          input_format.body.required = inputParams.filter(p => p.required).map(p => p.name);
+        }
+      }
+    }
+
+    if (outputParams.length > 0) {
+      output_format.type = 'object';
+      output_format.properties = {};
+      outputParams.forEach(param => {
+        if (param.name) {
+          output_format.properties[param.name] = {
+            type: param.type,
+            description: param.description
+          };
+        }
+      });
+    }
+
+    const submitData = { ...formData };
+    if (Object.keys(input_format).length > 0) submitData.input_format = input_format;
+    if (Object.keys(output_format).length > 0) submitData.output_format = output_format;
+
+    onSubmit(submitData);
+  };
+
   return (
-    <div className="console-window" style={{ width: '500px', margin: 0 }}>
+    <div className="console-window create-api-modal">
       <div className="window-header">
-        <span>> BAZAAR // EXECUTE_NEW_PROTOCOL</span>
+        <span>&gt; BAZAAR // EXECUTE_NEW_PROTOCOL</span>
         <div className="window-controls" onClick={onCancel} style={{ cursor: 'pointer' }}>X</div>
       </div>
-      <div className="window-content">
-        <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="form-grid">
+      <div className="window-content" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+        <form onSubmit={handleSubmit} className="form-grid">
 
           <div>
-            <label>>> NAME_ID:</label>
+            <label>&gt;&gt; NAME_ID:</label>
             <input name="name" onChange={handleChange} placeholder="Required..." required />
           </div>
 
           <div>
-            <label>>> ENDPOINT_SLUG:</label>
+            <label>&gt;&gt; ENDPOINT_SLUG:</label>
             <input name="endpoint" onChange={handleChange} placeholder="/example" required />
           </div>
 
           <div>
-            <label>>> TARGET_URL:</label>
+            <label>&gt;&gt; TARGET_URL:</label>
             <input name="target_url" onChange={handleChange} type="url" required />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
-              <label>>> METHOD:</label>
+              <label>&gt;&gt; METHOD:</label>
               <select name="method" onChange={handleChange}>
                 <option value="GET">GET</option>
                 <option value="POST">POST</option>
               </select>
             </div>
             <div>
-              <label>>> CREATOR_WALLET:</label>
+              <label>&gt;&gt; CREATOR_WALLET:</label>
               <input name="wallet_address" onChange={handleChange} required />
             </div>
           </div>
 
           <div>
-            <label>>> DATA_DESCRIPTION:</label>
+            <label>&gt;&gt; DATA_DESCRIPTION:</label>
             <textarea name="description" rows="3" onChange={handleChange}></textarea>
+          </div>
+
+          {/* Schema Definition Section */}
+          <div style={{ borderTop: '1px solid var(--terminal-dim)', paddingTop: '1rem', marginTop: '1rem' }}>
+            <button 
+              type="button" 
+              onClick={() => setShowSchemaForm(!showSchemaForm)}
+              style={{ width: '100%', marginBottom: '1rem' }}
+            >
+              {showSchemaForm ? '[ HIDE SCHEMA DEFINITION ]' : '[ DEFINE INPUT/OUTPUT SCHEMA ]'}
+            </button>
+
+            {showSchemaForm && (
+              <>
+                {/* Input Parameters */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <label style={{ fontSize: '1.1rem', color: 'var(--terminal-green)' }}>
+                      &gt;&gt; INPUT PARAMETERS:
+                    </label>
+                    <button type="button" onClick={addInputParam} className="small-btn">
+                      [ + ADD INPUT ]
+                    </button>
+                  </div>
+                  
+                  {inputParams.map((param, index) => (
+                    <div key={index} className="param-row">
+                      <input
+                        placeholder="Parameter name"
+                        value={param.name}
+                        onChange={(e) => updateInputParam(index, 'name', e.target.value)}
+                        style={{ flex: 2 }}
+                        required
+                      />
+                      <select
+                        value={param.type}
+                        onChange={(e) => updateInputParam(index, 'type', e.target.value)}
+                        style={{ flex: 1 }}
+                      >
+                        <option value="string">String</option>
+                        <option value="number">Number</option>
+                        <option value="boolean">Boolean</option>
+                        <option value="array">Array</option>
+                        <option value="object">Object</option>
+                      </select>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flex: 1 }}>
+                        <input
+                          type="checkbox"
+                          checked={param.required}
+                          onChange={(e) => updateInputParam(index, 'required', e.target.checked)}
+                        />
+                        Required
+                      </label>
+                      <input
+                        placeholder="Description"
+                        value={param.description}
+                        onChange={(e) => updateInputParam(index, 'description', e.target.value)}
+                        style={{ flex: 2 }}
+                      />
+                      <button 
+                        type="button" 
+                        onClick={() => removeInputParam(index)}
+                        className="remove-btn"
+                      >
+                        X
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Output Parameters */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <label style={{ fontSize: '1.1rem', color: 'var(--terminal-green)' }}>
+                      &gt;&gt; OUTPUT FIELDS:
+                    </label>
+                    <button type="button" onClick={addOutputParam} className="small-btn">
+                      [ + ADD OUTPUT ]
+                    </button>
+                  </div>
+                  
+                  {outputParams.map((param, index) => (
+                    <div key={index} className="param-row">
+                      <input
+                        placeholder="Field name"
+                        value={param.name}
+                        onChange={(e) => updateOutputParam(index, 'name', e.target.value)}
+                        style={{ flex: 2 }}
+                        required
+                      />
+                      <select
+                        value={param.type}
+                        onChange={(e) => updateOutputParam(index, 'type', e.target.value)}
+                        style={{ flex: 1 }}
+                      >
+                        <option value="string">String</option>
+                        <option value="number">Number</option>
+                        <option value="boolean">Boolean</option>
+                        <option value="array">Array</option>
+                        <option value="object">Object</option>
+                      </select>
+                      <input
+                        placeholder="Description"
+                        value={param.description}
+                        onChange={(e) => updateOutputParam(index, 'description', e.target.value)}
+                        style={{ flex: 3 }}
+                      />
+                      <button 
+                        type="button" 
+                        onClick={() => removeOutputParam(index)}
+                        className="remove-btn"
+                      >
+                        X
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'space-between' }}>

@@ -454,3 +454,55 @@ textarea:focus {
     padding: 4px 15px;
     border: none;
 }
+
+/* Create API Modal */
+.create-api-modal {
+    width: 700px !important;
+    max-width: 90vw;
+}
+
+.param-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    align-items: center;
+}
+
+.param-row input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+.small-btn {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--terminal-dim);
+    color: var(--terminal-dim);
+    font-family: 'VT323', monospace;
+    font-size: 1rem;
+    padding: 0.35rem 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.small-btn:hover {
+    border-color: var(--terminal-green);
+    color: var(--terminal-green);
+    background: rgba(0, 255, 65, 0.1);
+}
+
+.remove-btn {
+    background: rgba(255, 0, 0, 0.1);
+    border: 1px solid #ff0000;
+    color: #ff0000;
+    font-family: 'VT323', monospace;
+    font-size: 1rem;
+    padding: 0.35rem 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 40px;
+}
+
+.remove-btn:hover {
+    background: #ff0000;
+    color: #000;
+}
