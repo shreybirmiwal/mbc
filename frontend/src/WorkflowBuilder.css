@@ -325,6 +325,17 @@
   box-shadow: 0 0 20px var(--terminal-green);
 }
 
+.deploy-btn {
+  border-color: #00aaff;
+  color: #00aaff;
+}
+
+.deploy-btn:hover {
+  background: #00aaff;
+  color: #000;
+  box-shadow: 0 0 20px #00aaff;
+}
+
 .execute-btn {
   border-color: #00ff00;
   color: #00ff00;
@@ -790,4 +801,112 @@ button:disabled:hover {
 .delete-btn:hover {
   background: #ff0000;
   color: #000;
+}
+
+/* Deploy Modal */
+.deploy-modal {
+  background: rgba(5, 15, 5, 0.98);
+  border: 2px solid var(--terminal-green);
+  width: 90%;
+  max-width: 600px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 30px rgba(0, 255, 65, 0.5);
+}
+
+.deployment-info {
+  background: rgba(0, 170, 255, 0.1);
+  border: 1px solid #00aaff;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.deployment-info p {
+  margin: 0 0 0.5rem 0;
+  color: #00aaff;
+}
+
+.deployment-info ul {
+  margin: 0.5rem 0 0 1.5rem;
+  color: var(--terminal-dim);
+}
+
+.deployment-info li {
+  margin: 0.3rem 0;
+}
+
+.deployment-status {
+  text-align: center;
+  padding: 2rem;
+}
+
+.deployment-status h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.success-details {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--terminal-dim);
+  padding: 1rem;
+  margin: 1.5rem 0;
+  text-align: left;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed var(--terminal-dim);
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-row .label {
+  color: var(--terminal-dim);
+  font-size: 0.9rem;
+}
+
+.detail-row .value {
+  color: var(--terminal-green);
+  font-weight: bold;
+  word-break: break-all;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.link-btn {
+  background: rgba(0, 0, 0, 0.7);
+  border: 2px solid var(--terminal-green);
+  color: var(--terminal-green);
+  padding: 0.75rem 1.5rem;
+  font-family: 'VT323', monospace;
+  font-size: 1.2rem;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.2s;
+  font-weight: bold;
+}
+
+.link-btn:hover {
+  background: var(--terminal-green);
+  color: #000;
+}
+
+.loading-animation {
+  padding: 2rem;
+}
+
+.loading-animation p {
+  margin: 1rem 0;
+  animation: pulse 1.5s infinite;
 }

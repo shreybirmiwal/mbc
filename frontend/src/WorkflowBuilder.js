@@ -18,6 +18,8 @@ function WorkflowBuilder() {
   const [editingConnection, setEditingConnection] = useState(null);
   const [executionResults, setExecutionResults] = useState(null);
   const [executing, setExecuting] = useState(false);
+  const [showDeployModal, setShowDeployModal] = useState(false);
+  const [deploymentResult, setDeploymentResult] = useState(null);
 
   useEffect(() => {
     fetchApis();
@@ -243,6 +245,22 @@ function WorkflowBuilder() {
       setConnections([]);
       setSelectedNode(null);
     }
+  };
+
+  const deployWorkflow = () => {
+    if (nodes.length === 0) {
+      alert('>> ERROR: NO NODES IN WORKFLOW');
+      return;
+    }
+    
+    // Check that all connections have field mappings
+    const unmappedConnections = connections.filter(c => !c.fieldMappings || c.fieldMappings.length === 0);
+    if (unmappedConnections.length > 0) {
+      alert(`>> WARNING: ${unmappedConnections.length} connection(s) need field mappings!\n>> Click orange connection lines to configure.`);
+      return;
+    }
+    
+    setShowDeployModal(true);
   };
 
   const executeWorkflow = async () => {
@@ -508,11 +526,18 @@ function WorkflowBuilder() {
       {/* Control Panel */}
       <div className="workflow-controls">
         <button
+          onClick={deployWorkflow}
+          className="control-btn deploy-btn"
+          disabled={nodes.length === 0}
+        >
+          [ DEPLOY AS API ]
+        </button>
+        <button
           onClick={executeWorkflow}
           className="control-btn execute-btn"
           disabled={executing}
         >
-          {executing ? '[ EXECUTING... ]' : '[ EXECUTE WORKFLOW ]'}
+          {executing ? '[ EXECUTING... ]' : '[ TEST WORKFLOW ]'}
         </button>
         <button onClick={clearCanvas} className="control-btn clear-btn">
           [ CLEAR CANVAS ]
@@ -570,6 +595,250 @@ function WorkflowBuilder() {
           onClose={() => setExecutionResults(null)}
         />
       )}
+
+      {/* Deploy Modal */}
+      {showDeployModal && (
+        <DeployWorkflowModal
+          nodes={nodes}
+          connections={connections}
+          onClose={() => {
+            setShowDeployModal(false);
+            setDeploymentResult(null);
+          }}
+          onSuccess={(result) => {
+            setDeploymentResult(result);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Deploy Workflow Modal Component
+function DeployWorkflowModal({ nodes, connections, onClose, onSuccess }) {
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    wallet_address: ''
+  });
+  const [deploying, setDeploying] = useState(false);
+  const [deploymentStatus, setDeploymentStatus] = useState(null);
+
+  const handleDeploy = async (e) => {
+    e.preventDefault();
+    setDeploying(true);
+
+    try {
+      const workflowData = {
+        name: formData.name,
+        description: formData.description,
+        wallet_address: formData.wallet_address,
+        nodes: nodes.map(n => ({
+          id: n.id,
+          endpoint: n.api.endpoint,
+          inputs: n.parameters || {}
+        })),
+        connections: connections.map(c => ({
+          from: { nodeId: c.from.nodeId },
+          to: { nodeId: c.to.nodeId },
+          fieldMappings: c.fieldMappings || []
+        }))
+      };
+
+      const response = await fetch(`${API_BASE_URL}/admin/deploy-workflow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(workflowData)
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setDeploymentStatus({
+          success: true,
+          endpoint: result.endpoint,
+          job_id: result.job_id,
+          message: result.message
+        });
+        onSuccess(result);
+        
+        // Poll for completion
+        pollDeploymentStatus(result.job_id, result.endpoint);
+      } else {
+        setDeploymentStatus({
+          success: false,
+          error: result.error
+        });
+      }
+    } catch (error) {
+      setDeploymentStatus({
+        success: false,
+        error: error.message
+      });
+    } finally {
+      setDeploying(false);
+    }
+  };
+
+  const pollDeploymentStatus = async (jobId, endpoint) => {
+    // Poll every 2 seconds for up to 60 seconds
+    let attempts = 0;
+    const maxAttempts = 30;
+    
+    const interval = setInterval(async () => {
+      attempts++;
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/admin/api-info/${endpoint.replace('/', '')}`);
+        if (response.ok) {
+          const info = await response.json();
+          
+          if (info.token?.address) {
+            // Deployment complete!
+            setDeploymentStatus(prev => ({
+              ...prev,
+              completed: true,
+              apiUrl: `${API_BASE_URL}${endpoint}`,
+              tokenAddress: info.token.address,
+              flaunchLink: info.token.view_on_flaunch
+            }));
+            clearInterval(interval);
+          }
+        }
+      } catch (error) {
+        console.error('Error polling status:', error);
+      }
+      
+      if (attempts >= maxAttempts) {
+        clearInterval(interval);
+        setDeploymentStatus(prev => ({
+          ...prev,
+          timeout: true
+        }));
+      }
+    }, 2000);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="deploy-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <span>DEPLOY WORKFLOW AS API</span>
+          <button className="close-btn" onClick={onClose}>X</button>
+        </div>
+        
+        <div className="modal-body">
+          {!deploymentStatus ? (
+            <form onSubmit={handleDeploy}>
+              <p className="modal-hint">&gt;&gt; CREATE A NEW API ENDPOINT FROM THIS WORKFLOW</p>
+              
+              <div className="form-field">
+                <label>API Name <span className="required">*</span></label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="My Chained Workflow"
+                  required
+                />
+              </div>
+              
+              <div className="form-field">
+                <label>Description</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="This workflow chains weather and stock APIs..."
+                  rows="3"
+                />
+              </div>
+              
+              <div className="form-field">
+                <label>Creator Wallet Address <span className="required">*</span></label>
+                <input
+                  type="text"
+                  value={formData.wallet_address}
+                  onChange={(e) => setFormData({ ...formData, wallet_address: e.target.value })}
+                  placeholder="0x..."
+                  required
+                />
+              </div>
+              
+              <div className="deployment-info">
+                <p><strong>What happens next:</strong></p>
+                <ul>
+                  <li>✓ New API endpoint created</li>
+                  <li>✓ Token launched on Flaunch</li>
+                  <li>✓ x402 payment enabled</li>
+                  <li>✓ Anyone can call your chained workflow</li>
+                </ul>
+              </div>
+              
+              <div className="modal-actions">
+                <button type="button" onClick={onClose} className="cancel-btn">
+                  [ CANCEL ]
+                </button>
+                <button type="submit" className="save-btn" disabled={deploying}>
+                  {deploying ? '[ DEPLOYING... ]' : '[ DEPLOY NOW ]'}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="deployment-status">
+              {deploymentStatus.success ? (
+                <>
+                  <h3 style={{ color: 'var(--terminal-green)' }}>✓ DEPLOYMENT INITIATED</h3>
+                  <p>{deploymentStatus.message}</p>
+                  
+                  {deploymentStatus.completed ? (
+                    <>
+                      <div className="success-details">
+                        <div className="detail-row">
+                          <span className="label">API ENDPOINT:</span>
+                          <span className="value">{deploymentStatus.apiUrl}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="label">TOKEN:</span>
+                          <span className="value">{deploymentStatus.tokenAddress?.slice(0, 10)}...</span>
+                        </div>
+                      </div>
+                      
+                      <div className="action-buttons">
+                        <a 
+                          href={deploymentStatus.flaunchLink} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="link-btn"
+                        >
+                          [ VIEW ON FLAUNCH ]
+                        </a>
+                        <button onClick={onClose} className="save-btn">
+                          [ CLOSE ]
+                        </button>
+                      </div>
+                    </>
+                  ) : deploymentStatus.timeout ? (
+                    <p style={{ color: '#ffaa00' }}>Deployment taking longer than expected. Check back soon!</p>
+                  ) : (
+                    <div className="loading-animation">
+                      <p>⏳ Launching token on Flaunch...</p>
+                      <p style={{ fontSize: '0.9rem', color: 'var(--terminal-dim)' }}>This may take 30-60 seconds</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <h3 style={{ color: '#ff0000' }}>✗ DEPLOYMENT FAILED</h3>
+                  <p style={{ color: '#ff0000' }}>{deploymentStatus.error}</p>
+                  <button onClick={onClose} className="cancel-btn">
+                    [ CLOSE ]
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

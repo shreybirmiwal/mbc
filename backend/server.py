@@ -940,6 +940,91 @@ def list_apis():
     })
 
 
+@app.route("/admin/deploy-workflow", methods=["POST"])
+def deploy_workflow():
+    """
+    Deploy a workflow as a new API endpoint
+    
+    Creates a new API that chains multiple APIs together based on the workflow configuration.
+    The new API will have its own token and x402 payment.
+    """
+    try:
+        data = request.json
+        workflow_name = data.get("name", f"Workflow-{int(time.time())}")
+        workflow_description = data.get("description", "Chained API workflow")
+        wallet_address = data.get("wallet_address")
+        nodes = data.get("nodes", [])
+        connections = data.get("connections", [])
+        
+        if not wallet_address:
+            return jsonify({"error": "wallet_address required"}), 400
+        
+        if not nodes:
+            return jsonify({"error": "No nodes provided"}), 400
+        
+        # Create endpoint name from workflow name
+        endpoint = "/" + workflow_name.lower().replace(" ", "-")
+        
+        # Check if endpoint already exists
+        if endpoint in store.apis:
+            return jsonify({"error": f"Endpoint {endpoint} already exists"}), 400
+        
+        # Store workflow configuration
+        workflow_config = {
+            "nodes": nodes,
+            "connections": connections
+        }
+        
+        # Create API config for the workflow
+        api_config = {
+            "name": workflow_name,
+            "endpoint": endpoint,
+            "target_url": "INTERNAL_WORKFLOW",  # Special marker for workflow APIs
+            "method": "POST",
+            "wallet_address": wallet_address,
+            "description": workflow_description,
+            "workflow_config": workflow_config,
+            "created_at": time.time(),
+            "is_workflow": True
+        }
+        
+        # Add to store temporarily (will be replaced after token launch)
+        store.apis[endpoint] = api_config
+        
+        # Launch token on Flaunch in background
+        job_id = f"job_{endpoint}_{int(time.time())}"
+        store.launch_jobs[job_id] = "pending"
+        
+        def launch_workflow_token():
+            try:
+                result = store.launch_token_on_flaunch(api_config)
+                store.apis[endpoint].update(result)
+                store.launch_jobs[job_id] = "completed"
+                
+                # Save to JSON
+                store.save_api_to_json(store.apis[endpoint])
+                
+                print(f"[WORKFLOW] Successfully deployed {workflow_name} at {endpoint}")
+            except Exception as e:
+                print(f"[WORKFLOW] Error deploying {workflow_name}: {str(e)}")
+                store.launch_jobs[job_id] = f"failed: {str(e)}"
+        
+        thread = threading.Thread(target=launch_workflow_token)
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Workflow API {workflow_name} is being deployed",
+            "endpoint": endpoint,
+            "job_id": job_id,
+            "status": "launching"
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/admin/execute-workflow", methods=["POST"])
 def execute_workflow():
     """
@@ -1098,6 +1183,163 @@ def execute_workflow():
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+def execute_workflow_chain(workflow_config, initial_inputs):
+    """
+    Execute a workflow chain internally
+    Returns the final output and execution log
+    """
+    nodes = workflow_config["nodes"]
+    connections = workflow_config["connections"]
+    
+    # Build execution order
+    node_dict = {node["id"]: node for node in nodes}
+    node_results = {}
+    execution_log = []
+    
+    # Find nodes with no incoming connections
+    incoming = {node["id"]: [] for node in nodes}
+    for conn in connections:
+        incoming[conn["to"]["nodeId"]].append(conn)
+    
+    # Execute nodes in order
+    executed = set()
+    to_execute = [node_id for node_id, inc in incoming.items() if not inc]
+    
+    while to_execute:
+        current_id = to_execute.pop(0)
+        if current_id in executed:
+            continue
+        
+        node = node_dict[current_id]
+        endpoint = node["endpoint"]
+        
+        if endpoint not in store.apis:
+            raise Exception(f"API {endpoint} not found")
+        
+        api_config = store.apis[endpoint]
+        
+        # Build inputs for this node
+        node_inputs = initial_inputs.copy() if not executed else {}
+        node_inputs.update(node.get("inputs", {}))
+        
+        # Map outputs from previous nodes
+        for conn in incoming[current_id]:
+            if conn["from"]["nodeId"] in node_results:
+                from_result = node_results[conn["from"]["nodeId"]]
+                field_mappings = conn.get("fieldMappings", [])
+                
+                if field_mappings:
+                    for mapping in field_mappings:
+                        from_field = mapping.get("from")
+                        to_field = mapping.get("to")
+                        if from_field and to_field:
+                            if isinstance(from_result, dict) and from_field in from_result:
+                                node_inputs[to_field] = from_result[from_field]
+                else:
+                    node_inputs["input"] = from_result
+        
+        # Execute the API call
+        target_url = api_config["target_url"]
+        method = api_config["method"]
+        
+        execution_log.append({
+            "node_id": current_id,
+            "endpoint": endpoint,
+            "inputs": node_inputs.copy(),
+            "status": "executing"
+        })
+        
+        if method == "GET":
+            response = requests.get(target_url, params=node_inputs, timeout=30)
+        elif method == "POST":
+            response = requests.post(target_url, json=node_inputs, timeout=30)
+        else:
+            response = requests.request(method, target_url, json=node_inputs, timeout=30)
+        
+        response.raise_for_status()
+        
+        try:
+            result = response.json()
+        except:
+            result = {"output": response.text}
+        
+        node_results[current_id] = result
+        execution_log[-1]["status"] = "success"
+        execution_log[-1]["output"] = result
+        
+        executed.add(current_id)
+        
+        # Add dependent nodes to queue
+        for conn in connections:
+            if conn["from"]["nodeId"] == current_id:
+                to_node_id = conn["to"]["nodeId"]
+                all_deps_met = all(
+                    c["from"]["nodeId"] in executed 
+                    for c in incoming[to_node_id]
+                )
+                if all_deps_met and to_node_id not in executed:
+                    if to_node_id not in to_execute:
+                        to_execute.append(to_node_id)
+    
+    # Return the last node's result as final output
+    if executed:
+        last_executed = list(executed)[-1]
+        return node_results.get(last_executed, {}), execution_log
+    
+    return {}, execution_log
+
+
+@app.route("/<path:endpoint>", methods=["GET", "POST"])
+def handle_workflow_or_api(endpoint):
+    """
+    Handle both regular API calls and workflow API calls
+    """
+    endpoint = "/" + endpoint
+    
+    if endpoint not in store.apis:
+        return jsonify({"error": "API not found"}), 404
+    
+    api_config = store.apis[endpoint]
+    
+    # Check if this is a workflow API
+    if api_config.get("is_workflow"):
+        workflow_config = api_config.get("workflow_config")
+        
+        if not workflow_config:
+            return jsonify({"error": "Invalid workflow configuration"}), 500
+        
+        # Get inputs from request
+        if request.method == "GET":
+            initial_inputs = dict(request.args)
+        else:
+            initial_inputs = request.json or {}
+        
+        try:
+            # Execute the workflow chain
+            final_output, execution_log = execute_workflow_chain(workflow_config, initial_inputs)
+            
+            return jsonify({
+                "success": True,
+                "output": final_output,
+                "workflow": api_config["name"],
+                "nodes_executed": len(execution_log)
+            })
+        except Exception as e:
+            return jsonify({
+                "success": False,
+                "error": str(e)
+            }), 500
+    
+    # Regular API handling would go here (proxy to target_url)
+    # For now, return info about the API
+    return jsonify({
+        "message": "API endpoint",
+        "name": api_config["name"],
+        "endpoint": endpoint,
+        "use_x402_payment": True
+    })
 
 
 @app.route("/", methods=["GET"])
