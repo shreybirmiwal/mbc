@@ -1,13 +1,13 @@
 [
     {
-        "name": "Example Weather API",
-        "endpoint": "/weather",
-        "target_url": "https://api.example.com/weather",
+        "name": "Human data reviewer",
+        "endpoint": "/human-data-reviewer",
+        "target_url": "https://api.example.com/HUMAN",
         "method": "GET",
         "wallet_address": "0x1234567890123456789012345678901234567890",
-        "description": "Get weather data for any location",
+        "description": "Review human data",
         "token_address": "0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a",
-        "symbol": "WEAAPI",
+        "symbol": "HUMAPI",
         "token_uri": "https://flaunch.gg/base/coin/0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a",
         "tx_hash": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
         "flaunch_link": "https://flaunch.gg/base/coin/0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a",
@@ -48,49 +48,6 @@
         }
     },
     {
-        "name": "Example Stock API",
-        "endpoint": "/stocks",
-        "target_url": "https://api.example.com/stocks",
-        "method": "GET",
-        "wallet_address": "0x9876543210987654321098765432109876543210",
-        "description": "Get real-time stock prices",
-        "token_address": "0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a",
-        "symbol": "STOAPI",
-        "token_uri": "https://flaunch.gg/base/coin/0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a",
-        "tx_hash": "0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321",
-        "flaunch_link": "https://flaunch.gg/base/coin/0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a",
-        "input_format": {
-            "query_params": {
-                "symbol": {
-                    "type": "string",
-                    "required": true,
-                    "description": "Stock ticker symbol (e.g., AAPL, GOOGL)"
-                }
-            }
-        },
-        "output_format": {
-            "type": "object",
-            "properties": {
-                "symbol": {
-                    "type": "string",
-                    "description": "Stock ticker symbol"
-                },
-                "price": {
-                    "type": "number",
-                    "description": "Current stock price"
-                },
-                "change": {
-                    "type": "number",
-                    "description": "Price change today"
-                },
-                "volume": {
-                    "type": "number",
-                    "description": "Trading volume"
-                }
-            }
-        }
-    },
-    {
         "name": "shreyTest",
         "endpoint": "/sb",
         "target_url": "https://flaunch.gg/base/coin/0xd7719458df4f10e2e9d975b20916499b09d8ae25",
@@ -108,13 +65,13 @@
         "endpoint": "/mistral",
         "target_url": "https://openrouter.ai/api/v1/chat/completions",
         "method": "POST",
-        "wallet_address": "0xPLACEHOLDER_WALLET_ADDRESS_HERE",
+        "wallet_address": "0x9eb648d7a92b4360d13ed073366d191f5e775d72",
         "description": "Generate text using the Mistral 7B Instruct model via OpenRouter.",
-        "token_address": "0xPLACEHOLDER_TOKEN_ADDRESS_HERE",
+        "token_address": "0x9eb648d7a92b4360d13ed073366d191f5e775d72",
         "symbol": "MIST",
         "token_uri": "https://placeholder.uri/mistral",
-        "tx_hash": "0xPLACEHOLDER_TX_HASH",
-        "flaunch_link": "https://flaunch.gg/base/coin/PLACEHOLDER",
+        "tx_hash": "0x9eb648d7a92b4360d13ed073366d191f5e775d72",
+        "flaunch_link": "https://flaunch.gg/base/coin/0x9eb648d7a92b4360d13ed073366d191f5e775d72",
         "input_format": {
             "json_body": {
                 "prompt": {
@@ -139,13 +96,13 @@
         "endpoint": "/llama3",
         "target_url": "https://openrouter.ai/api/v1/chat/completions",
         "method": "POST",
-        "wallet_address": "0xPLACEHOLDER_WALLET_ADDRESS_HERE",
+        "wallet_address": "0x9eb648d7a92b4360d13ed073366d191f5e775d72",
         "description": "Generate text using Meta's Llama 3 8B Instruct model.",
-        "token_address": "0xPLACEHOLDER_TOKEN_ADDRESS_HERE",
+        "token_address": "0x9eb648d7a92b4360d13ed073366d191f5e775d72",
         "symbol": "LAMA",
         "token_uri": "https://placeholder.uri/llama",
-        "tx_hash": "0xPLACEHOLDER_TX_HASH",
-        "flaunch_link": "https://flaunch.gg/base/coin/PLACEHOLDER",
+        "tx_hash": "0x9eb648d7a92b4360d13ed073366d191f5e775d72",
+        "flaunch_link": "https://flaunch.gg/base/coin/0x9eb648d7a92b4360d13ed073366d191f5e775d72",
         "input_format": {
             "json_body": {
                 "prompt": {
@@ -170,13 +127,13 @@
         "endpoint": "/gemini",
         "target_url": "https://openrouter.ai/api/v1/chat/completions",
         "method": "POST",
-        "wallet_address": "0xPLACEHOLDER_WALLET_ADDRESS_HERE",
+        "wallet_address": "0x789005Ff7BF7fA898149c4A9c5a03c01ad3E3603",
         "description": "Generate text using Google's Gemini Pro model.",
-        "token_address": "0xPLACEHOLDER_TOKEN_ADDRESS_HERE",
+        "token_address": "0x789005Ff7BF7fA898149c4A9c5a03c01ad3E3603",
         "symbol": "GEM",
         "token_uri": "https://placeholder.uri/gemini",
-        "tx_hash": "0xPLACEHOLDER_TX_HASH",
-        "flaunch_link": "https://flaunch.gg/base/coin/PLACEHOLDER",
+        "tx_hash": "0x789005Ff7BF7fA898149c4A9c5a03c01ad3E3603",
+        "flaunch_link": "https://flaunch.gg/base/coin/0x789005Ff7BF7fA898149c4A9c5a03c01ad3E3603",
         "input_format": {
             "json_body": {
                 "prompt": {
@@ -201,13 +158,13 @@
         "endpoint": "/generic",
         "target_url": "https://openrouter.ai/api/v1/chat/completions",
         "method": "POST",
-        "wallet_address": "0xPLACEHOLDER_WALLET_ADDRESS_HERE",
+        "wallet_address": "0x789005Ff7BF7fA898149c4A9c5a03c01ad3E3603",
         "description": "Route requests to specific OpenRouter models dynamically.",
-        "token_address": "0xPLACEHOLDER_TOKEN_ADDRESS_HERE",
+        "token_address": "0x789005Ff7BF7fA898149c4A9c5a03c01ad3E3603",
         "symbol": "GENAI",
         "token_uri": "https://placeholder.uri/generic",
-        "tx_hash": "0xPLACEHOLDER_TX_HASH",
-        "flaunch_link": "https://flaunch.gg/base/coin/PLACEHOLDER",
+        "tx_hash": "0x789005Ff7BF7fA898149c4A9c5a03c01ad3E3603",
+        "flaunch_link": "https://flaunch.gg/base/coin/0x789005Ff7BF7fA898149c4A9c5a03c01ad3E3603",
         "input_format": {
             "json_body": {
                 "prompt": {
@@ -313,13 +270,13 @@
         "endpoint": "/fact",
         "target_url": "https://uselessfacts.jsph.pl/api/v2/facts/random",
         "method": "GET",
-        "wallet_address": "0xPLACEHOLDER_WALLET_ADDRESS_HERE",
+        "wallet_address": "0x34348556ccD630bFa1ea87F0ed4A1c1CD75d8036",
         "description": "Returns a random, useless fact for entertainment purposes.",
-        "token_address": "0xPLACEHOLDER_TOKEN_ADDRESS_HERE",
+        "token_address": "0x34348556ccD630bFa1ea87F0ed4A1c1CD75d8036",
         "symbol": "FACTS",
         "token_uri": "https://placeholder.uri/facts",
-        "tx_hash": "0xPLACEHOLDER_TX_HASH",
-        "flaunch_link": "https://flaunch.gg/base/coin/PLACEHOLDER",
+        "tx_hash": "0x34348556ccD630bFa1ea87F0ed4A1c1CD75d8036",
+        "flaunch_link": "https://flaunch.gg/base/coin/0x34348556ccD630bFa1ea87F0ed4A1c1CD75d8036",
         "input_format": {},
         "output_format": {
             "type": "object",
@@ -342,13 +299,13 @@
         "endpoint": "/joke",
         "target_url": "https://official-joke-api.appspot.com/random_joke",
         "method": "GET",
-        "wallet_address": "0xPLACEHOLDER_WALLET_ADDRESS_HERE",
+        "wallet_address": "0x8ceB2e893471b9Db1b57b1aEC50dC7f20aA89973",
         "description": "Returns a random joke with a setup and punchline.",
-        "token_address": "0xPLACEHOLDER_TOKEN_ADDRESS_HERE",
+        "token_address": "0x8ceB2e893471b9Db1b57b1aEC50dC7f20aA89973",
         "symbol": "JOKE",
         "token_uri": "https://placeholder.uri/joke",
         "tx_hash": "0xPLACEHOLDER_TX_HASH",
-        "flaunch_link": "https://flaunch.gg/base/coin/PLACEHOLDER",
+        "flaunch_link": "https://flaunch.gg/base/coin/0x8ceB2e893471b9Db1b57b1aEC50dC7f20aA89973",
         "input_format": {},
         "output_format": {
             "type": "object",
@@ -394,6 +351,71 @@
                 "readable": {
                     "type": "string",
                     "description": "Human readable string"
+                }
+            }
+        }
+    },
+    {
+        "name": "Stock API",
+        "endpoint": "/stocks",
+        "target_url": "https://api.example.com/stocks",
+        "method": "GET",
+        "wallet_address": "0x9876543210987654321098765432109876543210",
+        "description": "Get real-time stock prices",
+        "token_address": "0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a",
+        "symbol": "STOAPI",
+        "token_uri": "https://flaunch.gg/base/coin/0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a",
+        "tx_hash": "0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321",
+        "flaunch_link": "https://flaunch.gg/base/coin/0x2a66d51407b84b82b5aff3dec4d49f72cbcd322a",
+        "input_format": {
+            "query_params": {
+                "symbol": {
+                    "type": "string",
+                    "required": true,
+                    "description": "Stock ticker symbol (e.g., AAPL, GOOGL)"
+                }
+            }
+        },
+        "output_format": {
+            "type": "object",
+            "properties": {
+                "symbol": {
+                    "type": "string",
+                    "description": "Stock ticker symbol"
+                },
+                "price": {
+                    "type": "number",
+                    "description": "Current stock price"
+                },
+                "change": {
+                    "type": "number",
+                    "description": "Price change today"
+                },
+                "volume": {
+                    "type": "number",
+                    "description": "Trading volume"
+                }
+            }
+        }
+    },
+    {
+        "name": "Time",
+        "endpoint": "/time-server",
+        "target_url": "https://mbc-phi.vercel.app/time",
+        "method": "GET",
+        "wallet_address": "0xaf05dB6c0148F42e70eDBaB9357DD0D4edb6d1a4",
+        "description": "Returns the time",
+        "token_address": "0x397ed63a2be6a80470df046de4941621c9039895",
+        "symbol": "TIMAPI",
+        "token_uri": "ipfs://QmNU7odPJJCCkXwZw6oz6YkHxf2on753WVFtGVPBEGJUnu",
+        "tx_hash": "0xf1e3f2c9248f377382845e9be6772c09826257a5240470d9dba348516596b4ec",
+        "flaunch_link": "https://flaunch.gg/base/coin/0x397ed63a2be6a80470df046de4941621c9039895",
+        "output_format": {
+            "type": "object",
+            "properties": {
+                "iso": {
+                    "type": "string",
+                    "description": "Iso time stamp"
                 }
             }
         }
