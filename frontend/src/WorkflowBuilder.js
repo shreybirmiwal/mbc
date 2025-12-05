@@ -13,6 +13,10 @@ function WorkflowBuilder() {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const canvasRef = useRef(null);
   const [apiDetails, setApiDetails] = useState({});
+  const [apiSchemas, setApiSchemas] = useState({});
+  const [editingNode, setEditingNode] = useState(null);
+  const [executionResults, setExecutionResults] = useState(null);
+  const [executing, setExecuting] = useState(false);
 
   useEffect(() => {
     fetchApis();
@@ -29,29 +33,76 @@ function WorkflowBuilder() {
       const detailsPromises = apisList.map(async (api) => {
         try {
           const endpoint = api.endpoint.replace(/^\//, '');
+          
+          // Fetch API info
           const infoResponse = await fetch(`${API_BASE_URL}/admin/api-info/${endpoint}`);
+          let info = null;
           if (infoResponse.ok) {
-            const info = await infoResponse.json();
-            return { endpoint: api.endpoint, info };
+            info = await infoResponse.json();
           }
+          
+          // Fetch API schema
+          const schemaResponse = await fetch(`${API_BASE_URL}/admin/api-schema/${endpoint}`);
+          let schema = null;
+          if (schemaResponse.ok) {
+            schema = await schemaResponse.json();
+          }
+          
+          return { endpoint: api.endpoint, info, schema };
         } catch (error) {
           console.error(`Error fetching info for ${api.endpoint}:`, error);
         }
-        return { endpoint: api.endpoint, info: null };
+        return { endpoint: api.endpoint, info: null, schema: null };
       });
 
       const details = await Promise.all(detailsPromises);
       const detailsMap = {};
-      details.forEach(({ endpoint, info }) => {
+      const schemasMap = {};
+      details.forEach(({ endpoint, info, schema }) => {
         detailsMap[endpoint] = info;
+        schemasMap[endpoint] = schema;
       });
       setApiDetails(detailsMap);
+      setApiSchemas(schemasMap);
     } catch (error) {
       console.error('Error fetching APIs:', error);
     }
   };
 
   const addNodeToCanvas = (api) => {
+    const schema = apiSchemas[api.endpoint] || {};
+    
+    // Extract input parameters from schema
+    const inputParams = [];
+    if (schema.input_format) {
+      if (schema.input_format.query_params) {
+        Object.keys(schema.input_format.query_params).forEach(param => {
+          inputParams.push(param);
+        });
+      }
+      if (schema.input_format.body) {
+        if (typeof schema.input_format.body === 'object' && schema.input_format.body.properties) {
+          Object.keys(schema.input_format.body.properties).forEach(param => {
+            inputParams.push(param);
+          });
+        }
+      }
+    }
+    
+    // Extract output fields from schema
+    const outputParams = [];
+    if (schema.output_format) {
+      if (typeof schema.output_format === 'object' && schema.output_format.properties) {
+        Object.keys(schema.output_format.properties).forEach(param => {
+          outputParams.push(param);
+        });
+      }
+    }
+    
+    // Default to generic input/output if no schema
+    if (inputParams.length === 0) inputParams.push('input');
+    if (outputParams.length === 0) outputParams.push('output');
+    
     const newNode = {
       id: `node-${Date.now()}`,
       api: api,
@@ -59,8 +110,9 @@ function WorkflowBuilder() {
         x: 100 + (nodes.length * 50) % 400,
         y: 100 + Math.floor(nodes.length / 5) * 200
       },
-      inputs: ['input'],
-      outputs: ['output']
+      inputs: inputParams,
+      outputs: outputParams,
+      parameters: {} // User-configured parameters
     };
     setNodes([...nodes, newNode]);
   };
@@ -100,30 +152,22 @@ function WorkflowBuilder() {
     setDraggingNode(null);
   };
 
-  const handleOutputClick = (nodeId, outputIndex) => {
+  const handleOutputClick = (nodeId, outputName) => {
     if (connecting) {
-      // Complete the connection
-      if (connecting.nodeId !== nodeId) {
-        const newConnection = {
-          id: `conn-${Date.now()}`,
-          from: { nodeId: connecting.nodeId, output: connecting.outputIndex },
-          to: { nodeId, input: 0 }
-        };
-        setConnections([...connections, newConnection]);
-      }
+      // Can't connect output to output, cancel
       setConnecting(null);
     } else {
       // Start a connection
-      setConnecting({ nodeId, outputIndex });
+      setConnecting({ nodeId, outputName });
     }
   };
 
-  const handleInputClick = (nodeId, inputIndex) => {
+  const handleInputClick = (nodeId, inputName) => {
     if (connecting && connecting.nodeId !== nodeId) {
       const newConnection = {
         id: `conn-${Date.now()}`,
-        from: { nodeId: connecting.nodeId, output: connecting.outputIndex },
-        to: { nodeId, input: inputIndex }
+        from: { nodeId: connecting.nodeId, output: connecting.outputName },
+        to: { nodeId, input: inputName }
       };
       setConnections([...connections, newConnection]);
       setConnecting(null);
@@ -178,22 +222,51 @@ function WorkflowBuilder() {
       return;
     }
 
-    // For now, just show the workflow structure
-    const workflowData = {
-      nodes: nodes.map(n => ({
-        id: n.id,
-        api: n.api.endpoint,
-        position: n.position
-      })),
-      connections: connections.map(c => ({
-        from: c.from.nodeId,
-        to: c.to.nodeId
-      })),
-      totalPrice: calculateTotalPrice()
-    };
+    setExecuting(true);
+    setExecutionResults(null);
 
-    console.log('Executing workflow:', workflowData);
-    alert(`>> WORKFLOW READY\n>> NODES: ${nodes.length}\n>> CONNECTIONS: ${connections.length}\n>> TOTAL COST: ${formatCurrency(calculateTotalPrice())}`);
+    try {
+      const workflowData = {
+        nodes: nodes.map(n => ({
+          id: n.id,
+          endpoint: n.api.endpoint,
+          inputs: n.parameters || {}
+        })),
+        connections: connections.map(c => ({
+          from: c.from,
+          to: c.to
+        }))
+      };
+
+      const response = await fetch(`${API_BASE_URL}/admin/execute-workflow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(workflowData)
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setExecutionResults(result);
+        alert(`>> WORKFLOW EXECUTED SUCCESSFULLY\n>> NODES: ${result.nodes_executed}\n>> TOTAL COST: ${formatCurrency(result.total_cost)}`);
+      } else {
+        alert(`>> WORKFLOW EXECUTION FAILED\n>> ERROR: ${result.error}`);
+        setExecutionResults(result);
+      }
+    } catch (error) {
+      console.error('Error executing workflow:', error);
+      alert(`>> EXECUTION ERROR: ${error.message}`);
+    } finally {
+      setExecuting(false);
+    }
+  };
+
+  const updateNodeParameters = (nodeId, parameters) => {
+    setNodes(nodes.map(node =>
+      node.id === nodeId
+        ? { ...node, parameters }
+        : node
+    ));
   };
 
   return (
@@ -213,9 +286,9 @@ function WorkflowBuilder() {
           <div className="palette-header">AVAILABLE APIS</div>
           <div className="palette-content">
             {apis.length === 0 ? (
-              <div className="palette-empty">
-                <p>>> NO APIS AVAILABLE</p>
-              </div>
+            <div className="palette-empty">
+              <p>&gt;&gt; NO APIS AVAILABLE</p>
+            </div>
             ) : (
               apis.map((api, index) => {
                 const details = apiDetails[api.endpoint];
@@ -345,39 +418,52 @@ function WorkflowBuilder() {
                   <div className="node-ports">
                     {/* Input ports */}
                     <div className="input-ports">
-                      {node.inputs.map((input, idx) => (
+                      {node.inputs.map((inputName, idx) => (
                         <div
                           key={`input-${idx}`}
                           className="port input-port"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleInputClick(node.id, idx);
+                            handleInputClick(node.id, inputName);
                           }}
-                          title="Input"
+                          title={`Input: ${inputName}`}
                         >
                           <div className="port-dot"></div>
-                          <span className="port-label">IN</span>
+                          <span className="port-label">{inputName}</span>
                         </div>
                       ))}
                     </div>
 
                     {/* Output ports */}
                     <div className="output-ports">
-                      {node.outputs.map((output, idx) => (
+                      {node.outputs.map((outputName, idx) => (
                         <div
                           key={`output-${idx}`}
                           className="port output-port"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleOutputClick(node.id, idx);
+                            handleOutputClick(node.id, outputName);
                           }}
-                          title="Output"
+                          title={`Output: ${outputName}`}
                         >
-                          <span className="port-label">OUT</span>
+                          <span className="port-label">{outputName}</span>
                           <div className="port-dot"></div>
                         </div>
                       ))}
                     </div>
+                  </div>
+                  
+                  {/* Configure button */}
+                  <div className="node-footer">
+                    <button
+                      className="config-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingNode(node.id);
+                      }}
+                    >
+                      [CONFIG]
+                    </button>
                   </div>
                 </div>
               </div>
@@ -386,9 +472,9 @@ function WorkflowBuilder() {
 
           {nodes.length === 0 && (
             <div className="canvas-empty-state">
-              <p>>> CANVAS EMPTY</p>
-              <p>>> SELECT APIS FROM THE LEFT PANEL</p>
-              <p>>> CLICK TO ADD NODES</p>
+              <p>&gt;&gt; CANVAS EMPTY</p>
+              <p>&gt;&gt; SELECT APIS FROM THE LEFT PANEL</p>
+              <p>&gt;&gt; CLICK TO ADD NODES</p>
             </div>
           )}
         </div>
@@ -396,17 +482,207 @@ function WorkflowBuilder() {
 
       {/* Control Panel */}
       <div className="workflow-controls">
-        <button onClick={executeWorkflow} className="control-btn execute-btn">
-          [ EXECUTE WORKFLOW ]
+        <button 
+          onClick={executeWorkflow} 
+          className="control-btn execute-btn"
+          disabled={executing}
+        >
+          {executing ? '[ EXECUTING... ]' : '[ EXECUTE WORKFLOW ]'}
         </button>
         <button onClick={clearCanvas} className="control-btn clear-btn">
           [ CLEAR CANVAS ]
         </button>
         {connecting && (
           <span className="connecting-indicator">
-            >> CONNECTING... (CLICK INPUT PORT TO COMPLETE)
+            &gt;&gt; CONNECTING... (CLICK INPUT PORT TO COMPLETE)
           </span>
         )}
+        {executionResults && (
+          <button 
+            onClick={() => setExecutionResults(null)} 
+            className="control-btn"
+          >
+            [ HIDE RESULTS ]
+          </button>
+        )}
+      </div>
+
+      {/* Parameter Configuration Modal */}
+      {editingNode && (
+        <NodeConfigModal
+          node={nodes.find(n => n.id === editingNode)}
+          schema={apiSchemas[nodes.find(n => n.id === editingNode)?.api.endpoint]}
+          onSave={(params) => {
+            updateNodeParameters(editingNode, params);
+            setEditingNode(null);
+          }}
+          onClose={() => setEditingNode(null)}
+        />
+      )}
+
+      {/* Execution Results Modal */}
+      {executionResults && (
+        <ExecutionResultsModal
+          results={executionResults}
+          onClose={() => setExecutionResults(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Node Configuration Modal Component
+function NodeConfigModal({ node, schema, onSave, onClose }) {
+  const [parameters, setParameters] = useState(node.parameters || {});
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave(parameters);
+  };
+
+  const getInputFields = () => {
+    const fields = [];
+    
+    if (schema?.input_format?.query_params) {
+      Object.entries(schema.input_format.query_params).forEach(([name, spec]) => {
+        fields.push({
+          name,
+          type: spec.type || 'string',
+          required: spec.required || false,
+          description: spec.description || ''
+        });
+      });
+    }
+    
+    if (schema?.input_format?.body?.properties) {
+      Object.entries(schema.input_format.body.properties).forEach(([name, spec]) => {
+        fields.push({
+          name,
+          type: spec.type || 'string',
+          required: spec.required || false,
+          description: spec.description || ''
+        });
+      });
+    }
+
+    if (fields.length === 0) {
+      // Generic input field
+      fields.push({ name: 'input', type: 'string', required: false, description: '' });
+    }
+
+    return fields;
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="config-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <span>CONFIGURE NODE: {node.api.name}</span>
+          <button className="close-btn" onClick={onClose}>X</button>
+        </div>
+        
+        <div className="modal-body">
+          <form onSubmit={handleSubmit}>
+            <p className="modal-hint">&gt;&gt; SET INPUT PARAMETERS (LEAVE EMPTY TO USE CONNECTIONS)</p>
+            
+            {getInputFields().map((field) => (
+              <div key={field.name} className="form-field">
+                <label>
+                  {field.name}
+                  {field.required && <span className="required">*</span>}
+                </label>
+                {field.description && (
+                  <div className="field-description">{field.description}</div>
+                )}
+                <input
+                  type={field.type === 'number' ? 'number' : 'text'}
+                  value={parameters[field.name] || ''}
+                  onChange={(e) => setParameters({
+                    ...parameters,
+                    [field.name]: e.target.value
+                  })}
+                  placeholder={`Enter ${field.name}...`}
+                />
+              </div>
+            ))}
+            
+            <div className="modal-actions">
+              <button type="button" onClick={onClose} className="cancel-btn">
+                [ CANCEL ]
+              </button>
+              <button type="submit" className="save-btn">
+                [ SAVE ]
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Execution Results Modal Component
+function ExecutionResultsModal({ results, onClose }) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="results-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <span>WORKFLOW EXECUTION RESULTS</span>
+          <button className="close-btn" onClick={onClose}>X</button>
+        </div>
+        
+        <div className="modal-body">
+          <div className="results-summary">
+            <div className="summary-item">
+              <span className="label">STATUS:</span>
+              <span className={`value ${results.success ? 'success' : 'error'}`}>
+                {results.success ? '[SUCCESS]' : '[FAILED]'}
+              </span>
+            </div>
+            <div className="summary-item">
+              <span className="label">NODES EXECUTED:</span>
+              <span className="value">{results.nodes_executed || 0}</span>
+            </div>
+            <div className="summary-item">
+              <span className="label">TOTAL COST:</span>
+              <span className="value">${results.total_cost?.toFixed(10) || '0.0000000000'}</span>
+            </div>
+          </div>
+
+          <div className="execution-log">
+            <h3>EXECUTION LOG</h3>
+            {results.execution_log?.map((log, idx) => (
+              <div key={idx} className="log-entry">
+                <div className="log-header">
+                  <span className="node-id">[{log.node_id}]</span>
+                  <span className="endpoint">{log.endpoint}</span>
+                  <span className={`status ${log.status}`}>[{log.status.toUpperCase()}]</span>
+                </div>
+                
+                {log.inputs && Object.keys(log.inputs).length > 0 && (
+                  <div className="log-section">
+                    <div className="section-label">INPUTS:</div>
+                    <pre>{JSON.stringify(log.inputs, null, 2)}</pre>
+                  </div>
+                )}
+                
+                {log.output && (
+                  <div className="log-section">
+                    <div className="section-label">OUTPUT:</div>
+                    <pre>{JSON.stringify(log.output, null, 2)}</pre>
+                  </div>
+                )}
+                
+                {log.error && (
+                  <div className="log-section error">
+                    <div className="section-label">ERROR:</div>
+                    <pre>{log.error}</pre>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

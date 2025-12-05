@@ -938,6 +938,159 @@ def list_apis():
     })
 
 
+@app.route("/admin/execute-workflow", methods=["POST"])
+def execute_workflow():
+    """
+    Execute a workflow by chaining multiple API calls together
+    
+    Expects:
+    {
+        "nodes": [
+            {
+                "id": "node-1",
+                "endpoint": "/api1",
+                "inputs": {"param1": "value1"}
+            },
+            ...
+        ],
+        "connections": [
+            {
+                "from": {"nodeId": "node-1", "output": "result"},
+                "to": {"nodeId": "node-2", "input": "input_param"}
+            },
+            ...
+        ]
+    }
+    """
+    try:
+        data = request.json
+        nodes = data.get("nodes", [])
+        connections = data.get("connections", [])
+        
+        if not nodes:
+            return jsonify({"error": "No nodes provided"}), 400
+        
+        # Build execution order based on connections (simple topological sort)
+        node_dict = {node["id"]: node for node in nodes}
+        node_results = {}
+        execution_log = []
+        
+        # Find nodes with no incoming connections (starting nodes)
+        incoming = {node["id"]: [] for node in nodes}
+        for conn in connections:
+            incoming[conn["to"]["nodeId"]].append(conn)
+        
+        # Execute nodes in order
+        executed = set()
+        to_execute = [node_id for node_id, inc in incoming.items() if not inc]
+        
+        total_cost = 0.0
+        
+        while to_execute:
+            current_id = to_execute.pop(0)
+            if current_id in executed:
+                continue
+            
+            node = node_dict[current_id]
+            endpoint = node["endpoint"]
+            
+            if endpoint not in store.apis:
+                return jsonify({"error": f"API {endpoint} not found"}), 404
+            
+            api_config = store.apis[endpoint]
+            
+            # Build inputs for this node
+            node_inputs = node.get("inputs", {}).copy()
+            
+            # Map outputs from previous nodes
+            for conn in incoming[current_id]:
+                if conn["from"]["nodeId"] in node_results:
+                    from_result = node_results[conn["from"]["nodeId"]]
+                    output_key = conn["from"].get("output", "output")
+                    input_key = conn["to"].get("input", "input")
+                    
+                    # Extract the output value
+                    if isinstance(from_result, dict) and output_key in from_result:
+                        node_inputs[input_key] = from_result[output_key]
+                    else:
+                        node_inputs[input_key] = from_result
+            
+            # Execute the API call
+            try:
+                target_url = api_config["target_url"]
+                method = api_config["method"]
+                
+                execution_log.append({
+                    "node_id": current_id,
+                    "endpoint": endpoint,
+                    "target_url": target_url,
+                    "inputs": node_inputs,
+                    "status": "executing"
+                })
+                
+                # Make the actual API call
+                if method == "GET":
+                    response = requests.get(target_url, params=node_inputs, timeout=30)
+                elif method == "POST":
+                    response = requests.post(target_url, json=node_inputs, timeout=30)
+                else:
+                    response = requests.request(method, target_url, json=node_inputs, timeout=30)
+                
+                response.raise_for_status()
+                
+                # Store result
+                try:
+                    result = response.json()
+                except:
+                    result = {"output": response.text}
+                
+                node_results[current_id] = result
+                
+                # Add cost
+                api_price = api_config.get("api_price_usd", 0)
+                total_cost += api_price
+                
+                execution_log[-1]["status"] = "success"
+                execution_log[-1]["output"] = result
+                execution_log[-1]["cost"] = api_price
+                
+            except Exception as e:
+                execution_log[-1]["status"] = "error"
+                execution_log[-1]["error"] = str(e)
+                return jsonify({
+                    "success": False,
+                    "error": f"Error executing node {current_id}: {str(e)}",
+                    "execution_log": execution_log,
+                    "partial_results": node_results
+                }), 500
+            
+            executed.add(current_id)
+            
+            # Add nodes that can now be executed
+            for conn in connections:
+                if conn["from"]["nodeId"] == current_id:
+                    to_node_id = conn["to"]["nodeId"]
+                    # Check if all dependencies are met
+                    all_deps_met = all(
+                        c["from"]["nodeId"] in executed 
+                        for c in incoming[to_node_id]
+                    )
+                    if all_deps_met and to_node_id not in executed:
+                        if to_node_id not in to_execute:
+                            to_execute.append(to_node_id)
+        
+        return jsonify({
+            "success": True,
+            "execution_log": execution_log,
+            "results": node_results,
+            "total_cost": total_cost,
+            "nodes_executed": len(executed)
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/", methods=["GET"])
 def health():
     return jsonify({

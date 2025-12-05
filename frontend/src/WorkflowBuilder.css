@@ -182,10 +182,34 @@
 
 .node-body {
   padding: 1rem;
+  padding-bottom: 0.5rem;
 }
 
 .node-info {
   margin-bottom: 0.75rem;
+}
+
+.node-footer {
+  padding: 0.5rem 1rem;
+  border-top: 1px dashed var(--terminal-dim);
+  display: flex;
+  justify-content: center;
+}
+
+.config-btn {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--terminal-dim);
+  color: var(--terminal-dim);
+  padding: 0.25rem 0.75rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.config-btn:hover {
+  border-color: var(--terminal-green);
+  color: var(--terminal-green);
+  background: rgba(0, 255, 65, 0.1);
 }
 
 .node-endpoint {
@@ -244,9 +268,13 @@
 }
 
 .port-label {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: var(--terminal-dim);
   text-transform: uppercase;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .input-port {
@@ -340,4 +368,313 @@
 
 .palette-content::-webkit-scrollbar-thumb:hover {
   background: var(--terminal-green);
+}
+
+/* Modal Overlays */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(3px);
+}
+
+/* Configuration Modal */
+.config-modal {
+  background: rgba(5, 15, 5, 0.98);
+  border: 2px solid var(--terminal-green);
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 30px rgba(0, 255, 65, 0.5);
+}
+
+.modal-header {
+  background: var(--terminal-green);
+  color: #000;
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.close-btn {
+  background: #000;
+  color: var(--terminal-green);
+  border: 1px solid #000;
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: #ff0000;
+  color: #000;
+  border-color: #ff0000;
+}
+
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-hint {
+  color: var(--terminal-dim);
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px dashed var(--terminal-dim);
+  padding-bottom: 0.5rem;
+}
+
+.form-field {
+  margin-bottom: 1.5rem;
+}
+
+.form-field label {
+  display: block;
+  color: var(--terminal-green);
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.required {
+  color: #ff0000;
+  margin-left: 0.25rem;
+}
+
+.field-description {
+  font-size: 0.85rem;
+  color: var(--terminal-dim);
+  margin-bottom: 0.5rem;
+  font-style: italic;
+}
+
+.form-field input {
+  width: 100%;
+  background: #000;
+  border: 1px solid var(--terminal-dim);
+  color: var(--terminal-green);
+  padding: 0.75rem;
+  font-family: 'VT323', monospace;
+  font-size: 1.1rem;
+  box-sizing: border-box;
+}
+
+.form-field input:focus {
+  outline: none;
+  border-color: var(--terminal-green);
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--terminal-dim);
+}
+
+.cancel-btn,
+.save-btn {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.7);
+  border: 2px solid var(--terminal-green);
+  color: var(--terminal-green);
+  padding: 0.75rem 1.5rem;
+  font-family: 'VT323', monospace;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: bold;
+}
+
+.cancel-btn {
+  border-color: #ff0000;
+  color: #ff0000;
+}
+
+.cancel-btn:hover {
+  background: #ff0000;
+  color: #000;
+}
+
+.save-btn:hover {
+  background: var(--terminal-green);
+  color: #000;
+}
+
+/* Results Modal */
+.results-modal {
+  background: rgba(5, 15, 5, 0.98);
+  border: 2px solid var(--terminal-green);
+  width: 90%;
+  max-width: 900px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 30px rgba(0, 255, 65, 0.5);
+}
+
+.results-summary {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--terminal-dim);
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed var(--terminal-dim);
+}
+
+.summary-item:last-child {
+  border-bottom: none;
+}
+
+.summary-item .label {
+  color: var(--terminal-dim);
+  font-size: 1rem;
+}
+
+.summary-item .value {
+  color: var(--terminal-green);
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+.summary-item .value.success {
+  color: #00ff00;
+}
+
+.summary-item .value.error {
+  color: #ff0000;
+}
+
+.execution-log {
+  margin-top: 1rem;
+}
+
+.execution-log h3 {
+  color: var(--terminal-green);
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--terminal-green);
+  padding-bottom: 0.5rem;
+}
+
+.log-entry {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--terminal-dim);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.log-header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dashed var(--terminal-dim);
+}
+
+.node-id {
+  color: var(--terminal-dim);
+  font-size: 0.9rem;
+}
+
+.endpoint {
+  color: var(--terminal-green);
+  flex: 1;
+}
+
+.status {
+  font-weight: bold;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid;
+}
+
+.status.success {
+  color: #00ff00;
+  border-color: #00ff00;
+}
+
+.status.error {
+  color: #ff0000;
+  border-color: #ff0000;
+}
+
+.status.executing {
+  color: #ffff00;
+  border-color: #ffff00;
+}
+
+.log-section {
+  margin-top: 0.75rem;
+}
+
+.section-label {
+  color: var(--terminal-dim);
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.log-section pre {
+  background: #000;
+  border: 1px solid var(--terminal-dim);
+  padding: 0.75rem;
+  overflow-x: auto;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  color: var(--terminal-green);
+  line-height: 1.4;
+}
+
+.log-section.error pre {
+  color: #ff0000;
+  border-color: #ff0000;
+}
+
+/* Scrollbar for modals */
+.modal-body::-webkit-scrollbar {
+  width: 10px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: var(--terminal-dim);
+  border: 1px solid var(--terminal-green);
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: var(--terminal-green);
+}
+
+/* Disabled button state */
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  background: rgba(0, 0, 0, 0.7);
+  color: var(--terminal-green);
+  box-shadow: none;
 }
