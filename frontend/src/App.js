@@ -219,15 +219,15 @@ function App() {
   return (
     <div className="app">
       <header className="main-header">
-        <div className="ascii-art-banner-dual">
-          <pre className="ascii-banner-text bazaar-ascii">
-            {bazaarAsciiText}
-          </pre>
-          <pre className="ascii-banner-text crane-ascii-3d">
-            {craneAsciiText}
-          </pre>
-        </div>
         <div className="header-content">
+          <div className="ascii-art-banner-dual">
+            <pre className="ascii-banner-text bazaar-ascii">
+              {bazaarAsciiText}
+            </pre>
+            <pre className="ascii-banner-text crane-ascii-3d">
+              {craneAsciiText}
+            </pre>
+          </div>
           {/* <AsciiGlobe /> */}
           <div className="header-text">
             <h1>BAZAAR // MARKETPLACE</h1>
