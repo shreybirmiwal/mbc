@@ -247,40 +247,6 @@ mbc/
 
 ---
 
-## Deployed Contracts
-
-Bazaar uses a dynamic token deployment model. Each API that is created through the platform automatically launches its own ERC-20 token on Base network via the Flaunch protocol. As such, there is no single deployed contract address—instead, each API has its own unique token contract address.
-
-### Token Deployment Details
-
-- **Network**: Base Mainnet (Chain ID: 8453)
-- **Token Standard**: ERC-20
-- **Launch Platform**: Flaunch (bonding curve DEX)
-- **Payment Protocol**: x402 (USDC payments)
-
-### Viewing Deployed Tokens
-
-When you create an API, you'll receive:
-- Token contract address
-- Flaunch trading link: `https://flaunch.gg/base/coin/{token_address}`
-- Transaction hash for the deployment
-
-You can view all deployed tokens by:
-1. Checking the `/admin/list-apis` endpoint
-2. Using the frontend marketplace interface
-3. Viewing individual API status via `/admin/api-status/<endpoint>`
-
-### Example Token Information
-
-Each token includes:
-- Token address (ERC-20 contract on Base)
-- Symbol (e.g., "GEMAPI", "CLAUAPI")
-- Real-time price data from Flaunch DEX
-- 24h and 7d trading volume
-- Link to trade on Flaunch
-
----
-
 ## Additional Resources
 
 - [x402 Documentation](https://x402.dev)
