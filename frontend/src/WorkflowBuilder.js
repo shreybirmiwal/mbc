@@ -25,17 +25,17 @@ function WorkflowBuilder() {
   const fetchApis = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/admin/list-apis`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const text = await response.text();
       if (!text) {
         console.error('Empty response from server');
         return;
       }
-      
+
       const data = JSON.parse(text);
       const apisList = data.apis || [];
       setApis(apisList);
@@ -44,21 +44,21 @@ function WorkflowBuilder() {
       const detailsPromises = apisList.map(async (api) => {
         try {
           const endpoint = api.endpoint.replace(/^\//, '');
-          
+
           // Fetch API info
           const infoResponse = await fetch(`${API_BASE_URL}/admin/api-info/${endpoint}`);
           let info = null;
           if (infoResponse.ok) {
             info = await infoResponse.json();
           }
-          
+
           // Fetch API schema
           const schemaResponse = await fetch(`${API_BASE_URL}/admin/api-schema/${endpoint}`);
           let schema = null;
           if (schemaResponse.ok) {
             schema = await schemaResponse.json();
           }
-          
+
           return { endpoint: api.endpoint, info, schema };
         } catch (error) {
           console.error(`Error fetching info for ${api.endpoint}:`, error);
@@ -82,7 +82,7 @@ function WorkflowBuilder() {
 
   const addNodeToCanvas = (api) => {
     const schema = apiSchemas[api.endpoint] || {};
-    
+
     // Extract input parameters from schema
     const inputParams = [];
     if (schema.input_format) {
@@ -99,7 +99,7 @@ function WorkflowBuilder() {
         }
       }
     }
-    
+
     // Extract output fields from schema
     const outputParams = [];
     if (schema.output_format) {
@@ -109,11 +109,11 @@ function WorkflowBuilder() {
         });
       }
     }
-    
+
     // Default to generic input/output if no schema
     if (inputParams.length === 0) inputParams.push('input');
     if (outputParams.length === 0) outputParams.push('output');
-    
+
     const newNode = {
       id: `node-${Date.now()}`,
       api: api,
@@ -256,7 +256,7 @@ function WorkflowBuilder() {
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
         setExecutionResults(result);
         alert(`>> WORKFLOW EXECUTED SUCCESSFULLY\n>> NODES: ${result.nodes_executed}\n>> TOTAL COST: ${formatCurrency(result.total_cost)}`);
@@ -297,9 +297,9 @@ function WorkflowBuilder() {
           <div className="palette-header">AVAILABLE APIS</div>
           <div className="palette-content">
             {apis.length === 0 ? (
-            <div className="palette-empty">
-              <p>&gt;&gt; NO APIS AVAILABLE</p>
-            </div>
+              <div className="palette-empty">
+                <p>&gt;&gt; NO APIS AVAILABLE</p>
+              </div>
             ) : (
               apis.map((api, index) => {
                 const details = apiDetails[api.endpoint];
@@ -463,7 +463,7 @@ function WorkflowBuilder() {
                       ))}
                     </div>
                   </div>
-                  
+
                   {/* Configure button */}
                   <div className="node-footer">
                     <button
@@ -493,8 +493,8 @@ function WorkflowBuilder() {
 
       {/* Control Panel */}
       <div className="workflow-controls">
-        <button 
-          onClick={executeWorkflow} 
+        <button
+          onClick={executeWorkflow}
           className="control-btn execute-btn"
           disabled={executing}
         >
@@ -509,8 +509,8 @@ function WorkflowBuilder() {
           </span>
         )}
         {executionResults && (
-          <button 
-            onClick={() => setExecutionResults(null)} 
+          <button
+            onClick={() => setExecutionResults(null)}
             className="control-btn"
           >
             [ HIDE RESULTS ]
@@ -553,7 +553,7 @@ function NodeConfigModal({ node, schema, onSave, onClose }) {
 
   const getInputFields = () => {
     const fields = [];
-    
+
     if (schema?.input_format?.query_params) {
       Object.entries(schema.input_format.query_params).forEach(([name, spec]) => {
         fields.push({
@@ -564,7 +564,7 @@ function NodeConfigModal({ node, schema, onSave, onClose }) {
         });
       });
     }
-    
+
     if (schema?.input_format?.body?.properties) {
       Object.entries(schema.input_format.body.properties).forEach(([name, spec]) => {
         fields.push({
@@ -591,11 +591,11 @@ function NodeConfigModal({ node, schema, onSave, onClose }) {
           <span>CONFIGURE NODE: {node.api.name}</span>
           <button className="close-btn" onClick={onClose}>X</button>
         </div>
-        
+
         <div className="modal-body">
           <form onSubmit={handleSubmit}>
             <p className="modal-hint">&gt;&gt; SET INPUT PARAMETERS (LEAVE EMPTY TO USE CONNECTIONS)</p>
-            
+
             {getInputFields().map((field) => (
               <div key={field.name} className="form-field">
                 <label>
@@ -616,7 +616,7 @@ function NodeConfigModal({ node, schema, onSave, onClose }) {
                 />
               </div>
             ))}
-            
+
             <div className="modal-actions">
               <button type="button" onClick={onClose} className="cancel-btn">
                 [ CANCEL ]
@@ -641,7 +641,7 @@ function ExecutionResultsModal({ results, onClose }) {
           <span>WORKFLOW EXECUTION RESULTS</span>
           <button className="close-btn" onClick={onClose}>X</button>
         </div>
-        
+
         <div className="modal-body">
           <div className="results-summary">
             <div className="summary-item">
@@ -669,21 +669,21 @@ function ExecutionResultsModal({ results, onClose }) {
                   <span className="endpoint">{log.endpoint}</span>
                   <span className={`status ${log.status}`}>[{log.status.toUpperCase()}]</span>
                 </div>
-                
+
                 {log.inputs && Object.keys(log.inputs).length > 0 && (
                   <div className="log-section">
                     <div className="section-label">INPUTS:</div>
                     <pre>{JSON.stringify(log.inputs, null, 2)}</pre>
                   </div>
                 )}
-                
+
                 {log.output && (
                   <div className="log-section">
                     <div className="section-label">OUTPUT:</div>
                     <pre>{JSON.stringify(log.output, null, 2)}</pre>
                   </div>
                 )}
-                
+
                 {log.error && (
                   <div className="log-section error">
                     <div className="section-label">ERROR:</div>
