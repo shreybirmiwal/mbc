@@ -22,13 +22,24 @@ Bazaar works with x402 handling dynamic payments and flaunch handles token laucn
 
 
 ## Technical Summary
-Technical Summary
-Problem Being Solved
-API pricing is typically static, opaque, and disconnected from actual demand. Providers must guess rates, leading to inefficiencies, wasted resources, or overcharging users. Bazaar addresses this by creating market-driven pricing that adjusts dynamically based on real demand.
-Layer 2 Advantages (Base)
-Bazaar is deployed on Base to leverage low fees, fast transaction settlement, and seamless integration with crypto-native payment rails via x402. Base makes frequent token interactions, bonding-curve price updates, and API usage payments economically viable while ensuring smooth user experience.
-EVM Stack Usage
-Bazaar relies on existing EVM infrastructure rather than custom contracts. API tokens are launched via flaunch, which handles bonding-curve pricing, liquidity, and trading. Payments and API usage enforcement are handled through x402. This removes the need for custom smart contracts while still enabling on-chain settlement, tokenized API economies, and transparent market-driven pricing.
-Off-Chain Components
+**Problem Being Solved
+**
+API pricing is static and disconnected from actual demand/supply because they are sticky in pricing. Providers must guess rates, leading to inefficiencies, wasted resources, or overcharging users. Bazaar addresses this by creating market-driven pricing that adjusts dynamically based on real demand.
+
+**Layer 2 Advantages (Base)
+**
+Bazaar is deployed on Base because we can get low fees, fast transaction settlement, and built in support for x402.
+
+- We use x402 to handle the automatic API payment system.
+- We use Flaunch API to create bomnding curve price updates to handle the pricing, order matching, etc
+- We use dexScreener to serve the pricing data for each API.
+
+**EVM Stack Usage
+**
+- API tokens are launched via flaunch, which handles bonding-curve pricing, liquidity, and trading.
+- Payments and API usage enforcement are handled through x402.
+
+
+**Off-Chain Components
+**
 The Flask backend manages API metadata, triggers flaunch token launches, and wraps APIs via x402. The React frontend provides a user-friendly interface for uploading APIs, viewing tokens, trading, and calling APIs. All heavy logic for pricing, token mechanics, and payment settlement is delegated to flaunch and x402.
-Bazaar demonstrates how market mechanisms can be applied to API monetization, creating flexible, efficient, and transparent tokenized API economies without reinventing the on-chain stack.
