@@ -25,7 +25,18 @@ function WorkflowBuilder() {
   const fetchApis = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/admin/list-apis`);
-      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const text = await response.text();
+      if (!text) {
+        console.error('Empty response from server');
+        return;
+      }
+      
+      const data = JSON.parse(text);
       const apisList = data.apis || [];
       setApis(apisList);
 

@@ -124,7 +124,18 @@ function App() {
   const fetchApis = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/admin/list-apis`);
-      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const text = await response.text();
+      if (!text) {
+        console.error('Empty response from server');
+        return;
+      }
+      
+      const data = JSON.parse(text);
       const apisList = data.apis || [];
       setApis(apisList);
 
@@ -472,7 +483,7 @@ function CreateAPIForm({ onSubmit, onCancel }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     // Build input/output format from params
     const input_format = {};
     const output_format = {};
@@ -573,8 +584,8 @@ function CreateAPIForm({ onSubmit, onCancel }) {
 
           {/* Schema Definition Section */}
           <div style={{ borderTop: '1px solid var(--terminal-dim)', paddingTop: '1rem', marginTop: '1rem' }}>
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => setShowSchemaForm(!showSchemaForm)}
               style={{ width: '100%', marginBottom: '1rem' }}
             >
@@ -593,7 +604,7 @@ function CreateAPIForm({ onSubmit, onCancel }) {
                       [ + ADD INPUT ]
                     </button>
                   </div>
-                  
+
                   {inputParams.map((param, index) => (
                     <div key={index} className="param-row">
                       <input
@@ -628,8 +639,8 @@ function CreateAPIForm({ onSubmit, onCancel }) {
                         onChange={(e) => updateInputParam(index, 'description', e.target.value)}
                         style={{ flex: 2 }}
                       />
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={() => removeInputParam(index)}
                         className="remove-btn"
                       >
@@ -649,7 +660,7 @@ function CreateAPIForm({ onSubmit, onCancel }) {
                       [ + ADD OUTPUT ]
                     </button>
                   </div>
-                  
+
                   {outputParams.map((param, index) => (
                     <div key={index} className="param-row">
                       <input
@@ -676,8 +687,8 @@ function CreateAPIForm({ onSubmit, onCancel }) {
                         onChange={(e) => updateOutputParam(index, 'description', e.target.value)}
                         style={{ flex: 3 }}
                       />
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={() => removeOutputParam(index)}
                         className="remove-btn"
                       >
