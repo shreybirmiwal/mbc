@@ -55,9 +55,9 @@ function WorkflowBuilder() {
     const newNode = {
       id: `node-${Date.now()}`,
       api: api,
-      position: { 
-        x: 100 + (nodes.length * 50) % 400, 
-        y: 100 + Math.floor(nodes.length / 5) * 200 
+      position: {
+        x: 100 + (nodes.length * 50) % 400,
+        y: 100 + Math.floor(nodes.length / 5) * 200
       },
       inputs: ['input'],
       outputs: ['output']
@@ -68,7 +68,7 @@ function WorkflowBuilder() {
   const handleNodeMouseDown = (e, nodeId) => {
     if (e.button !== 0) return; // Only left mouse button
     e.stopPropagation();
-    
+
     const node = nodes.find(n => n.id === nodeId);
     if (!node) return;
 
@@ -88,8 +88,8 @@ function WorkflowBuilder() {
       const x = e.clientX - rect.left - dragOffset.x;
       const y = e.clientY - rect.top - dragOffset.y;
 
-      setNodes(nodes.map(node => 
-        node.id === draggingNode 
+      setNodes(nodes.map(node =>
+        node.id === draggingNode
           ? { ...node, position: { x, y } }
           : node
       ));
@@ -132,7 +132,7 @@ function WorkflowBuilder() {
 
   const removeNode = (nodeId) => {
     setNodes(nodes.filter(n => n.id !== nodeId));
-    setConnections(connections.filter(c => 
+    setConnections(connections.filter(c =>
       c.from.nodeId !== nodeId && c.to.nodeId !== nodeId
     ));
     if (selectedNode === nodeId) {
@@ -221,8 +221,8 @@ function WorkflowBuilder() {
                 const details = apiDetails[api.endpoint];
                 const price = details?.pricing?.api_price_usd || 0;
                 return (
-                  <div 
-                    key={index} 
+                  <div
+                    key={index}
                     className="palette-item"
                     onClick={() => addNodeToCanvas(api)}
                   >
@@ -237,7 +237,7 @@ function WorkflowBuilder() {
         </div>
 
         {/* Canvas */}
-        <div 
+        <div
           className="workflow-canvas"
           ref={canvasRef}
           onMouseMove={handleCanvasMouseMove}
@@ -249,7 +249,7 @@ function WorkflowBuilder() {
             {connections.map(conn => {
               const fromNode = getNodePosition(conn.from.nodeId);
               const toNode = getNodePosition(conn.to.nodeId);
-              
+
               const x1 = fromNode.x + 280; // Right side of node
               const y1 = fromNode.y + 70; // Middle of node
               const x2 = toNode.x; // Left side of node
@@ -291,7 +291,7 @@ function WorkflowBuilder() {
                 </g>
               );
             })}
-            
+
             {/* Connection being drawn */}
             {connecting && (
               <line
@@ -312,7 +312,7 @@ function WorkflowBuilder() {
             const details = apiDetails[node.api.endpoint];
             const price = details?.pricing?.api_price_usd || 0;
             const isSelected = selectedNode === node.id;
-            
+
             return (
               <div
                 key={node.id}
@@ -325,7 +325,7 @@ function WorkflowBuilder() {
               >
                 <div className="node-header">
                   <span>{details?.api_name || node.api.name}</span>
-                  <button 
+                  <button
                     className="node-remove"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -335,13 +335,13 @@ function WorkflowBuilder() {
                     X
                   </button>
                 </div>
-                
+
                 <div className="node-body">
                   <div className="node-info">
                     <div className="node-endpoint">{node.api.endpoint}</div>
                     <div className="node-price">{formatCurrency(price)}</div>
                   </div>
-                  
+
                   <div className="node-ports">
                     {/* Input ports */}
                     <div className="input-ports">
@@ -360,7 +360,7 @@ function WorkflowBuilder() {
                         </div>
                       ))}
                     </div>
-                    
+
                     {/* Output ports */}
                     <div className="output-ports">
                       {node.outputs.map((output, idx) => (

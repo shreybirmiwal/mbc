@@ -256,16 +256,16 @@ function App() {
             </div>
           </div>
         </div>
-        
+
         {/* Tab Navigation */}
         <div className="tab-navigation">
-          <button 
+          <button
             className={`tab-btn ${activeTab === 'marketplace' ? 'active' : ''}`}
             onClick={() => setActiveTab('marketplace')}
           >
             [ MARKETPLACE ]
           </button>
-          <button 
+          <button
             className={`tab-btn ${activeTab === 'workflow' ? 'active' : ''}`}
             onClick={() => setActiveTab('workflow')}
           >
@@ -277,24 +277,24 @@ function App() {
       {/* Main Content Area */}
       {activeTab === 'marketplace' && (
         <div className="apis-grid">
-        {apis.length === 0 ? (
-          <div className="console-window">
-            <div className="window-header">SYSTEM_MSG</div>
-            <div className="window-content">
-              <p>>> NO DATA FOUND.</p>
-              <p>>> INITIATE NEW PROTOCOL TO BEGIN.</p>
+          {apis.length === 0 ? (
+            <div className="console-window">
+              <div className="window-header">SYSTEM_MSG</div>
+              <div className="window-content">
+                <p>>> NO DATA FOUND.</p>
+                <p>>> INITIATE NEW PROTOCOL TO BEGIN.</p>
+              </div>
             </div>
-          </div>
-        ) : (
-          apis.map((api, index) => (
-            <ConsoleCard
-              key={api.endpoint}
-              api={api}
-              details={apiDetails[api.endpoint]}
-              index={index}
-            />
-          ))
-        )}
+          ) : (
+            apis.map((api, index) => (
+              <ConsoleCard
+                key={api.endpoint}
+                api={api}
+                details={apiDetails[api.endpoint]}
+                index={index}
+              />
+            ))
+          )}
         </div>
       )}
 
