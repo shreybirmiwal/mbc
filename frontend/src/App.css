@@ -180,17 +180,96 @@ h3 {
     justify-content: center;
 }
 
+.ascii-art-banner-dual {
+    width: 100%;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 3rem;
+    perspective: 1000px;
+    min-height: 150px;
+    flex-wrap: wrap;
+}
+
 .ascii-banner-text {
     font-family: 'Courier New', monospace;
     font-size: 4px;
     line-height: 1;
-    color: var(--terminal-dim);
-    text-shadow: 0 0 3px rgba(0, 255, 65, 0.3);
+    color: var(--terminal-green);
+    text-shadow:
+        0 0 5px rgba(0, 255, 65, 0.6),
+        0 0 10px rgba(0, 255, 65, 0.4);
     margin: 0;
-    padding: 0;
+    padding: 1rem;
     white-space: pre;
     user-select: none;
-    opacity: 0.6;
+    opacity: 0.8;
+}
+
+.bazaar-ascii {
+    animation: bazaar-glow 3s ease-in-out infinite;
+}
+
+.crane-ascii-3d {
+    transform-style: preserve-3d;
+    letter-spacing: 0.5px;
+    animation: crane-3d-rotate 20s ease-in-out infinite;
+}
+
+@keyframes bazaar-glow {
+    0%, 100% {
+        opacity: 0.7;
+        text-shadow:
+            0 0 5px rgba(0, 255, 65, 0.6),
+            0 0 10px rgba(0, 255, 65, 0.4);
+    }
+    50% {
+        opacity: 0.9;
+        text-shadow:
+            0 0 8px rgba(0, 255, 65, 0.8),
+            0 0 15px rgba(0, 255, 65, 0.5),
+            0 0 20px rgba(0, 255, 65, 0.3);
+    }
+}
+
+@keyframes crane-3d-rotate {
+    0% {
+        transform: rotateY(0deg) rotateX(0deg) scale(1);
+        text-shadow:
+            0 0 5px rgba(0, 255, 65, 0.8),
+            0 0 10px rgba(0, 255, 65, 0.4),
+            0 0 15px rgba(0, 255, 65, 0.2);
+    }
+    25% {
+        transform: rotateY(15deg) rotateX(5deg) scale(1.05);
+        text-shadow:
+            0 0 8px rgba(0, 255, 65, 1),
+            0 0 15px rgba(0, 255, 65, 0.6),
+            0 0 20px rgba(0, 255, 65, 0.3);
+    }
+    50% {
+        transform: rotateY(0deg) rotateX(-5deg) scale(1.1);
+        text-shadow:
+            0 0 10px rgba(0, 255, 65, 1),
+            0 0 20px rgba(0, 255, 65, 0.7),
+            0 0 30px rgba(0, 255, 65, 0.4);
+    }
+    75% {
+        transform: rotateY(-15deg) rotateX(5deg) scale(1.05);
+        text-shadow:
+            0 0 8px rgba(0, 255, 65, 1),
+            0 0 15px rgba(0, 255, 65, 0.6),
+            0 0 20px rgba(0, 255, 65, 0.3);
+    }
+    100% {
+        transform: rotateY(0deg) rotateX(0deg) scale(1);
+        text-shadow:
+            0 0 5px rgba(0, 255, 65, 0.8),
+            0 0 10px rgba(0, 255, 65, 0.4),
+            0 0 15px rgba(0, 255, 65, 0.2);
+    }
 }
 
 .header-content {
@@ -253,6 +332,12 @@ h3 {
 
     .ascii-banner-text {
         font-size: 3px;
+    }
+
+    .ascii-art-banner-dual {
+        flex-direction: column;
+        gap: 1rem;
+        min-height: auto;
     }
 }
 

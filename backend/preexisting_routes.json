@@ -102,5 +102,300 @@
         "token_uri": "ipfs://Qmb99W6kesh8JBEFcWssGeSYPWoRUGDppEFcU3nWqgdqZL",
         "tx_hash": "0x8c25d30bde164d8723723f36ece5074fa91095d9492f86fd771d0ba44077d855",
         "flaunch_link": "https://flaunch.gg/base/coin/0x8554c4eb957e06c51dcb73540f720ab952e6c180"
+    },
+    {
+        "name": "Mistral 7B AI",
+        "endpoint": "/mistral",
+        "target_url": "https://openrouter.ai/api/v1/chat/completions",
+        "method": "POST",
+        "wallet_address": "0xPLACEHOLDER_WALLET_ADDRESS_HERE",
+        "description": "Generate text using the Mistral 7B Instruct model via OpenRouter.",
+        "token_address": "0xPLACEHOLDER_TOKEN_ADDRESS_HERE",
+        "symbol": "MIST",
+        "token_uri": "https://placeholder.uri/mistral",
+        "tx_hash": "0xPLACEHOLDER_TX_HASH",
+        "flaunch_link": "https://flaunch.gg/base/coin/PLACEHOLDER",
+        "input_format": {
+            "json_body": {
+                "prompt": {
+                    "type": "string",
+                    "required": true,
+                    "description": "The prompt to send to the AI model."
+                }
+            }
+        },
+        "output_format": {
+            "type": "object",
+            "properties": {
+                "output": {
+                    "type": "string",
+                    "description": "The generated text response from the AI."
+                }
+            }
+        }
+    },
+    {
+        "name": "Llama 3 AI",
+        "endpoint": "/llama3",
+        "target_url": "https://openrouter.ai/api/v1/chat/completions",
+        "method": "POST",
+        "wallet_address": "0xPLACEHOLDER_WALLET_ADDRESS_HERE",
+        "description": "Generate text using Meta's Llama 3 8B Instruct model.",
+        "token_address": "0xPLACEHOLDER_TOKEN_ADDRESS_HERE",
+        "symbol": "LAMA",
+        "token_uri": "https://placeholder.uri/llama",
+        "tx_hash": "0xPLACEHOLDER_TX_HASH",
+        "flaunch_link": "https://flaunch.gg/base/coin/PLACEHOLDER",
+        "input_format": {
+            "json_body": {
+                "prompt": {
+                    "type": "string",
+                    "required": true,
+                    "description": "The prompt to send to the AI model."
+                }
+            }
+        },
+        "output_format": {
+            "type": "object",
+            "properties": {
+                "output": {
+                    "type": "string",
+                    "description": "The generated text response from the AI."
+                }
+            }
+        }
+    },
+    {
+        "name": "Gemini Pro AI",
+        "endpoint": "/gemini",
+        "target_url": "https://openrouter.ai/api/v1/chat/completions",
+        "method": "POST",
+        "wallet_address": "0xPLACEHOLDER_WALLET_ADDRESS_HERE",
+        "description": "Generate text using Google's Gemini Pro model.",
+        "token_address": "0xPLACEHOLDER_TOKEN_ADDRESS_HERE",
+        "symbol": "GEM",
+        "token_uri": "https://placeholder.uri/gemini",
+        "tx_hash": "0xPLACEHOLDER_TX_HASH",
+        "flaunch_link": "https://flaunch.gg/base/coin/PLACEHOLDER",
+        "input_format": {
+            "json_body": {
+                "prompt": {
+                    "type": "string",
+                    "required": true,
+                    "description": "The prompt to send to the AI model."
+                }
+            }
+        },
+        "output_format": {
+            "type": "object",
+            "properties": {
+                "output": {
+                    "type": "string",
+                    "description": "The generated text response from the AI."
+                }
+            }
+        }
+    },
+    {
+        "name": "Generic AI Router",
+        "endpoint": "/generic",
+        "target_url": "https://openrouter.ai/api/v1/chat/completions",
+        "method": "POST",
+        "wallet_address": "0xPLACEHOLDER_WALLET_ADDRESS_HERE",
+        "description": "Route requests to specific OpenRouter models dynamically.",
+        "token_address": "0xPLACEHOLDER_TOKEN_ADDRESS_HERE",
+        "symbol": "GENAI",
+        "token_uri": "https://placeholder.uri/generic",
+        "tx_hash": "0xPLACEHOLDER_TX_HASH",
+        "flaunch_link": "https://flaunch.gg/base/coin/PLACEHOLDER",
+        "input_format": {
+            "json_body": {
+                "prompt": {
+                    "type": "string",
+                    "required": true,
+                    "description": "The prompt to send."
+                },
+                "model": {
+                    "type": "string",
+                    "required": false,
+                    "description": "The specific model ID to use (default: mistralai/mistral-7b-instruct:free)."
+                }
+            }
+        },
+        "output_format": {
+            "type": "object",
+            "properties": {
+                "output": {
+                    "type": "string",
+                    "description": "The generated text response."
+                }
+            }
+        }
+    },
+    {
+        "name": "Global Weather Data",
+        "endpoint": "/weather",
+        "target_url": "https://api.open-meteo.com/v1/forecast",
+        "method": "GET",
+        "wallet_address": "0xPLACEHOLDER_WALLET_ADDRESS_HERE",
+        "description": "Get current temperature and wind speed for a specific latitude and longitude.",
+        "token_address": "0xPLACEHOLDER_TOKEN_ADDRESS_HERE",
+        "symbol": "WTHR",
+        "token_uri": "https://placeholder.uri/weather",
+        "tx_hash": "0xPLACEHOLDER_TX_HASH",
+        "flaunch_link": "https://flaunch.gg/base/coin/PLACEHOLDER",
+        "input_format": {
+            "query_params": {
+                "lat": {
+                    "type": "number",
+                    "required": false,
+                    "description": "Latitude (default: 52.52)"
+                },
+                "lon": {
+                    "type": "number",
+                    "required": false,
+                    "description": "Longitude (default: 13.41)"
+                }
+            }
+        },
+        "output_format": {
+            "type": "object",
+            "properties": {
+                "latitude": {
+                    "type": "number"
+                },
+                "longitude": {
+                    "type": "number"
+                },
+                "current": {
+                    "type": "object",
+                    "properties": {
+                        "temperature_2m": {
+                            "type": "number"
+                        },
+                        "wind_speed_10m": {
+                            "type": "number"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    {
+        "name": "Bitcoin Price Feed",
+        "endpoint": "/bitcoin",
+        "target_url": "https://api.coindesk.com/v1/bpi/currentprice.json",
+        "method": "GET",
+        "wallet_address": "0xPLACEHOLDER_WALLET_ADDRESS_HERE",
+        "description": "Fetch the current Bitcoin price Index (BPI) in USD, GBP, and EUR.",
+        "token_address": "0xPLACEHOLDER_TOKEN_ADDRESS_HERE",
+        "symbol": "BTCAPI",
+        "token_uri": "https://placeholder.uri/bitcoin",
+        "tx_hash": "0xPLACEHOLDER_TX_HASH",
+        "flaunch_link": "https://flaunch.gg/base/coin/PLACEHOLDER",
+        "input_format": {},
+        "output_format": {
+            "type": "object",
+            "properties": {
+                "bpi": {
+                    "type": "object",
+                    "description": "Bitcoin Price Index data objects."
+                },
+                "time": {
+                    "type": "object",
+                    "description": "Time of price update."
+                }
+            }
+        }
+    },
+    {
+        "name": "Useless Facts",
+        "endpoint": "/fact",
+        "target_url": "https://uselessfacts.jsph.pl/api/v2/facts/random",
+        "method": "GET",
+        "wallet_address": "0xPLACEHOLDER_WALLET_ADDRESS_HERE",
+        "description": "Returns a random, useless fact for entertainment purposes.",
+        "token_address": "0xPLACEHOLDER_TOKEN_ADDRESS_HERE",
+        "symbol": "FACTS",
+        "token_uri": "https://placeholder.uri/facts",
+        "tx_hash": "0xPLACEHOLDER_TX_HASH",
+        "flaunch_link": "https://flaunch.gg/base/coin/PLACEHOLDER",
+        "input_format": {},
+        "output_format": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string",
+                    "description": "The content of the fact."
+                },
+                "source": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    {
+        "name": "Random Jokes",
+        "endpoint": "/joke",
+        "target_url": "https://official-joke-api.appspot.com/random_joke",
+        "method": "GET",
+        "wallet_address": "0xPLACEHOLDER_WALLET_ADDRESS_HERE",
+        "description": "Returns a random joke with a setup and punchline.",
+        "token_address": "0xPLACEHOLDER_TOKEN_ADDRESS_HERE",
+        "symbol": "JOKE",
+        "token_uri": "https://placeholder.uri/joke",
+        "tx_hash": "0xPLACEHOLDER_TX_HASH",
+        "flaunch_link": "https://flaunch.gg/base/coin/PLACEHOLDER",
+        "input_format": {},
+        "output_format": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string"
+                },
+                "setup": {
+                    "type": "string",
+                    "description": "The setup of the joke."
+                },
+                "punchline": {
+                    "type": "string",
+                    "description": "The punchline of the joke."
+                }
+            }
+        }
+    },
+    {
+        "name": "Server Time",
+        "endpoint": "/time",
+        "target_url": "http://localhost:5000/time",
+        "method": "GET",
+        "wallet_address": "0xPLACEHOLDER_WALLET_ADDRESS_HERE",
+        "description": "Returns the current server time in various formats.",
+        "token_address": "0xPLACEHOLDER_TOKEN_ADDRESS_HERE",
+        "symbol": "TIME",
+        "token_uri": "https://placeholder.uri/time",
+        "tx_hash": "0xPLACEHOLDER_TX_HASH",
+        "flaunch_link": "https://flaunch.gg/base/coin/PLACEHOLDER",
+        "input_format": {},
+        "output_format": {
+            "type": "object",
+            "properties": {
+                "iso": {
+                    "type": "string",
+                    "description": "ISO 8601 formatted time"
+                },
+                "timestamp": {
+                    "type": "number",
+                    "description": "Unix timestamp"
+                },
+                "readable": {
+                    "type": "string",
+                    "description": "Human readable string"
+                }
+            }
+        }
     }
 ]

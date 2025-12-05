@@ -253,7 +253,7 @@ class FlaunchTokenStore:
         
         # Market cap in wei/smallest units (1M wei ≈ $1 USD)
         # Default: 1,000,000 wei ≈ $1 USD starting market cap
-        starting_market_cap = api_config.get("starting_market_cap", "1000000")
+        starting_market_cap = api_config.get("starting_market_cap", "100000000")
         
         launch_data = {
             "name": f"{api_name} Token",
