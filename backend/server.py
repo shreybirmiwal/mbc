@@ -525,6 +525,22 @@ def proxy_to_target_api(target_url: str, method: str = "GET"):
         return jsonify({"error": f"Target API error: {str(e)}"}), 502
 
 
+@app.errorhandler(403)
+def handle_403_error(e):
+    """Handle 403 Forbidden errors - allow admin routes to bypass"""
+    # If this is an admin route, allow it through
+    if request.path.startswith('/admin/'):
+        # Admin routes should not require payment
+        # Return None to continue processing the request normally
+        return None
+    
+    # For non-admin routes, return the 403 error
+    return jsonify({
+        "error": "Forbidden",
+        "message": "Access denied. Payment may be required for this endpoint.",
+        "path": request.path
+    }), 403
+
 @app.errorhandler(Exception)
 def handle_x402_error(e):
     """Handle x402 middleware errors and other exceptions"""
