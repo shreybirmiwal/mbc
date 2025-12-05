@@ -185,7 +185,7 @@ function WorkflowBuilder() {
         };
         setConnections([...connections, newConnection]);
         setConnecting(null);
-        
+
         // Auto-open mapping modal
         setEditingConnection(newConnection.id);
       }
@@ -452,7 +452,7 @@ function WorkflowBuilder() {
 
                   <div className="node-ports">
                     {/* Input area - click to connect */}
-                    <div 
+                    <div
                       className={`connection-area input-area ${connecting?.type === 'output' ? 'can-connect' : ''}`}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -465,7 +465,7 @@ function WorkflowBuilder() {
                     </div>
 
                     {/* Output area - click to start connection */}
-                    <div 
+                    <div
                       className={`connection-area output-area ${!connecting ? 'can-connect' : ''}`}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -668,13 +668,13 @@ function NodeConfigModal({ node, schema, onSave, onClose }) {
 function ConnectionMappingModal({ connection, nodes, apiSchemas, onSave, onDelete, onClose }) {
   const fromNode = nodes.find(n => n.id === connection.from.nodeId);
   const toNode = nodes.find(n => n.id === connection.to.nodeId);
-  
+
   const fromSchema = apiSchemas[fromNode?.api.endpoint] || {};
   const toSchema = apiSchemas[toNode?.api.endpoint] || {};
 
   // Get available output fields from source node
   const availableOutputs = fromNode?.outputs || [];
-  
+
   // Get available input fields from target node
   const availableInputs = toNode?.inputs || [];
 
@@ -708,11 +708,11 @@ function ConnectionMappingModal({ connection, nodes, apiSchemas, onSave, onDelet
           <span>CONFIGURE CONNECTION: {fromNode?.api.name} → {toNode?.api.name}</span>
           <button className="close-btn" onClick={onClose}>X</button>
         </div>
-        
+
         <div className="modal-body">
           <form onSubmit={handleSubmit}>
             <p className="modal-hint">&gt;&gt; MAP OUTPUT FIELDS TO INPUT FIELDS</p>
-            
+
             <div className="mapping-list">
               {mappings.length === 0 ? (
                 <div className="no-mappings">
@@ -735,9 +735,9 @@ function ConnectionMappingModal({ connection, nodes, apiSchemas, onSave, onDelet
                         ))}
                       </select>
                     </div>
-                    
+
                     <div className="mapping-arrow">→</div>
-                    
+
                     <div className="mapping-field">
                       <label>To (Input):</label>
                       <select
@@ -751,9 +751,9 @@ function ConnectionMappingModal({ connection, nodes, apiSchemas, onSave, onDelet
                         ))}
                       </select>
                     </div>
-                    
-                    <button 
-                      type="button" 
+
+                    <button
+                      type="button"
                       onClick={() => removeMapping(index)}
                       className="remove-btn"
                       title="Remove mapping"
@@ -764,19 +764,19 @@ function ConnectionMappingModal({ connection, nodes, apiSchemas, onSave, onDelet
                 ))
               )}
             </div>
-            
-            <button 
-              type="button" 
+
+            <button
+              type="button"
               onClick={addMapping}
               className="add-mapping-btn"
             >
               [ + ADD MAPPING ]
             </button>
-            
+
             <div className="modal-actions">
-              <button 
-                type="button" 
-                onClick={onDelete} 
+              <button
+                type="button"
+                onClick={onDelete}
                 className="delete-btn"
               >
                 [ DELETE CONNECTION ]
