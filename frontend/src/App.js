@@ -219,24 +219,29 @@ function App() {
   return (
     <div className="app">
       <header className="main-header">
-        <div className="header-content">
-          <div className="ascii-art-banner-dual">
-            <pre className="ascii-banner-text bazaar-ascii">
-              {bazaarAsciiText}
-            </pre>
-            <pre className="ascii-banner-text crane-ascii-3d">
-              {craneAsciiText}
-            </pre>
+        {/* New 3-Column Integrated Header */}
+        <div className="header-dashboard-grid">
+
+          {/* Left Column: Bazaar ASCII */}
+          <div className="header-col ascii-col left">
+            <pre className="integrated-ascii bazaar-large crane-anim">{bazaarAsciiText}</pre>
           </div>
-          {/* <AsciiGlobe /> */}
-          <div className="header-text">
+
+          {/* Center Column: Title & Stats */}
+          <div className="header-col center-info">
             <h1>BAZAAR // MARKETPLACE</h1>
             <div className="system-status">
-              <span>STATUS: ONLINE</span>
-              <span>ENCRYPTION: 256-BIT</span>
-              <span>NODES: {apis.length}</span>
+              <div className="status-item">STATUS: <span className="blink">ONLINE</span></div>
+              <div className="status-item">ENCRYPTION: 256-BIT</div>
+              <div className="status-item">NODES: {apis.length}</div>
             </div>
           </div>
+
+          {/* Right Column: Crane ASCII */}
+          <div className="header-col ascii-col right">
+            <pre className="integrated-ascii crane-anim bazaar-large">{craneAsciiText}</pre>
+          </div>
+
         </div>
 
         {/* Tab Navigation */}

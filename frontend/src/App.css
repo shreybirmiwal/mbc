@@ -133,7 +133,6 @@ h3 {
 .main-header {
     border-bottom: 1px solid var(--terminal-green);
     margin-bottom: 1rem;
-    padding: 1.5rem 1rem;
     padding-bottom: 1rem;
 }
 
@@ -173,7 +172,7 @@ h3 {
     box-shadow: 0 0 20px rgba(0, 255, 65, 0.6);
 }
 
-.ascii-art-banner {
+/* .ascii-art-banner {
     width: 100%;
     overflow: hidden;
     margin-bottom: 1rem;
@@ -184,31 +183,30 @@ h3 {
 .ascii-art-banner-dual {
     width: 100%;
     overflow: hidden;
+    margin-bottom: 1rem;
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 2rem;
+    gap: 3rem;
     perspective: 1000px;
-    margin-bottom: 1.5rem;
+    min-height: 150px;
     flex-wrap: wrap;
-    position: relative;
-    z-index: 1;
 }
 
 .ascii-banner-text {
     font-family: 'Courier New', monospace;
-    font-size: 3px;
+    font-size: 4px;
     line-height: 1;
-    color: var(--terminal-dim);
+    color: var(--terminal-green);
     text-shadow:
-        0 0 3px rgba(0, 255, 65, 0.4),
-        0 0 6px rgba(0, 255, 65, 0.2);
+        0 0 5px rgba(0, 255, 65, 0.6),
+        0 0 10px rgba(0, 255, 65, 0.4);
     margin: 0;
-    padding: 0.5rem;
+    padding: 1rem;
     white-space: pre;
     user-select: none;
-    opacity: 0.5;
-}
+    opacity: 0.8;
+} */
 
 .bazaar-ascii {
     animation: bazaar-glow 3s ease-in-out infinite;
@@ -221,17 +219,21 @@ h3 {
 }
 
 @keyframes bazaar-glow {
-    0%, 100% {
-        opacity: 0.4;
+
+    0%,
+    100% {
+        opacity: 0.7;
         text-shadow:
-            0 0 3px rgba(0, 255, 65, 0.4),
-            0 0 6px rgba(0, 255, 65, 0.2);
+            0 0 5px rgba(0, 255, 65, 0.6),
+            0 0 10px rgba(0, 255, 65, 0.4);
     }
+
     50% {
-        opacity: 0.6;
+        opacity: 0.9;
         text-shadow:
-            0 0 5px rgba(0, 255, 65, 0.5),
-            0 0 10px rgba(0, 255, 65, 0.3);
+            0 0 8px rgba(0, 255, 65, 0.8),
+            0 0 15px rgba(0, 255, 65, 0.5),
+            0 0 20px rgba(0, 255, 65, 0.3);
     }
 }
 
@@ -239,53 +241,223 @@ h3 {
     0% {
         transform: rotateY(0deg) rotateX(0deg) scale(1);
         text-shadow:
-            0 0 3px rgba(0, 255, 65, 0.4),
-            0 0 6px rgba(0, 255, 65, 0.2);
-        opacity: 0.4;
+            0 0 5px rgba(0, 255, 65, 0.8),
+            0 0 10px rgba(0, 255, 65, 0.4),
+            0 0 15px rgba(0, 255, 65, 0.2);
     }
+
     25% {
-        transform: rotateY(10deg) rotateX(3deg) scale(1.02);
+        transform: rotateY(15deg) rotateX(5deg) scale(1.05);
         text-shadow:
-            0 0 4px rgba(0, 255, 65, 0.5),
-            0 0 8px rgba(0, 255, 65, 0.3);
-        opacity: 0.5;
+            0 0 8px rgba(0, 255, 65, 1),
+            0 0 15px rgba(0, 255, 65, 0.6),
+            0 0 20px rgba(0, 255, 65, 0.3);
     }
+
     50% {
-        transform: rotateY(0deg) rotateX(-3deg) scale(1.03);
+        transform: rotateY(0deg) rotateX(-5deg) scale(1.1);
         text-shadow:
-            0 0 5px rgba(0, 255, 65, 0.5),
-            0 0 10px rgba(0, 255, 65, 0.3);
-        opacity: 0.6;
+            0 0 10px rgba(0, 255, 65, 1),
+            0 0 20px rgba(0, 255, 65, 0.7),
+            0 0 30px rgba(0, 255, 65, 0.4);
     }
+
     75% {
-        transform: rotateY(-10deg) rotateX(3deg) scale(1.02);
+        transform: rotateY(-15deg) rotateX(5deg) scale(1.05);
         text-shadow:
-            0 0 4px rgba(0, 255, 65, 0.5),
-            0 0 8px rgba(0, 255, 65, 0.3);
-        opacity: 0.5;
+            0 0 8px rgba(0, 255, 65, 1),
+            0 0 15px rgba(0, 255, 65, 0.6),
+            0 0 20px rgba(0, 255, 65, 0.3);
     }
+
     100% {
         transform: rotateY(0deg) rotateX(0deg) scale(1);
         text-shadow:
-            0 0 3px rgba(0, 255, 65, 0.4),
-            0 0 6px rgba(0, 255, 65, 0.2);
-        opacity: 0.4;
+            0 0 5px rgba(0, 255, 65, 0.8),
+            0 0 10px rgba(0, 255, 65, 0.4),
+            0 0 15px rgba(0, 255, 65, 0.2);
     }
 }
 
-.header-content {
+/* --- Integrated Dashboard Header --- */
+.main-header {
+    border-bottom: none;
+    /* Removed old border */
+    margin-bottom: 2rem;
+    padding-bottom: 0;
+}
+
+.header-dashboard-grid {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px solid var(--terminal-green);
+    background: rgba(0, 20, 0, 0.6);
+    /* Subtle dark green tint */
+    padding: 1rem;
+    position: relative;
+    box-shadow: 0 0 15px rgba(0, 255, 65, 0.1);
+    min-height: 180px;
+    /* Ensure enough height for ASCII */
+    margin-bottom: 1.5rem;
+}
+
+/* Corner brackets effect for the header */
+.header-dashboard-grid::before {
+    content: "";
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    width: 20px;
+    height: 20px;
+    border-top: 3px solid var(--terminal-green);
+    border-left: 3px solid var(--terminal-green);
+}
+
+.header-dashboard-grid::after {
+    content: "";
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 20px;
+    height: 20px;
+    border-bottom: 3px solid var(--terminal-green);
+    border-right: 3px solid var(--terminal-green);
+}
+
+.header-col {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     flex-direction: column;
+}
+
+/* ASCII Columns */
+.ascii-col {
+    overflow: hidden;
+    opacity: 0.8;
+    max-height: 160px;
+    /* Clip if too tall */
+}
+
+.integrated-ascii {
+    font-family: 'Courier New', monospace;
+    font-size: 4px;
+    /* Tiny font size to act as texture */
+    line-height: 4px;
+    color: var(--terminal-green);
+    margin: 0;
+    white-space: pre;
+    text-shadow: 0 0 2px rgba(0, 255, 65, 0.5);
+}
+
+/* Specific alignments */
+.ascii-col.left {
+    align-items: flex-start;
+    padding-left: 2rem;
+}
+
+.ascii-col.right {
+    align-items: flex-end;
+    padding-right: 2rem;
+}
+
+/* Center Title Section */
+.center-info {
+    flex: 2;
+    /* Give more space to center */
+    z-index: 2;
+    text-align: center;
+    background: radial-gradient(circle, rgba(0, 0, 0, 0.8) 0%, transparent 70%);
+}
+
+.center-info h1 {
+    font-size: 3rem;
+    margin: 0 0 1rem 0;
+    text-shadow: 0 0 15px var(--terminal-green);
+    border-bottom: 2px solid var(--terminal-dim);
+    padding-bottom: 0.5rem;
+    display: inline-block;
+}
+
+.system-status {
+    display: flex;
+    gap: 2rem;
+    font-size: 1.1rem;
+    color: var(--terminal-dim);
+    background: rgba(0, 0, 0, 0.5);
+    padding: 5px 15px;
+    border: 1px solid var(--terminal-dim);
+}
+
+.status-item {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.blink {
+    animation: blinker 2s linear infinite;
+    color: #fff;
+    text-shadow: 0 0 5px #fff;
+}
+
+@keyframes blinker {
+    50% {
+        opacity: 0;
+    }
+}
+
+/* Crane Animation (keep existing 3d rotate if you want, or simplify) */
+.crane-anim {
+    animation: pulse-dim 4s infinite alternate;
+}
+
+@keyframes pulse-dim {
+    0% {
+        opacity: 0.4;
+    }
+
+    100% {
+        opacity: 0.9;
+    }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 1000px) {
+    .header-dashboard-grid {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .ascii-col {
+        display: none;
+        /* Hide ASCII on small screens to save space */
+    }
+}
+
+.bazaar-large {
+    font-size: 8px;
+    /* Increased from 4px to 8px */
+    line-height: 8px;
+    /* Keep tight line height */
+    opacity: 1;
+    /* Make it brighter/more visible */
+    font-weight: bold;
+    /* Thicker lines */
+}
+
+/* .header-content {
+    display: flex;
     align-items: center;
     justify-content: center;
-    gap: 1rem;
-    position: relative;
+    gap: 2rem;
 }
 
 .header-text {
     text-align: center;
     flex: 1;
-}
+} */
 
 .ascii-globe {
     font-family: 'Courier New', monospace;
