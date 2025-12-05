@@ -378,7 +378,6 @@ function ConsoleCard({ api, details, index }) {
 
             {/* Full URL Access Point */}
             <div className="access-point-container">
-              <div className="data-label">DONT:</div>
               <div className="data-label" style={{ marginTop: '0.5rem' }}>ACCESS_POINT:</div>
               <div className="url-row">
                 <span className="url-text">{fullUrl}</span>
