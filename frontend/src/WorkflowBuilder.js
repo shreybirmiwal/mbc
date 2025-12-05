@@ -15,6 +15,7 @@ function WorkflowBuilder() {
   const [apiDetails, setApiDetails] = useState({});
   const [apiSchemas, setApiSchemas] = useState({});
   const [editingNode, setEditingNode] = useState(null);
+  const [editingConnection, setEditingConnection] = useState(null);
   const [executionResults, setExecutionResults] = useState(null);
   const [executing, setExecuting] = useState(false);
 
@@ -163,25 +164,31 @@ function WorkflowBuilder() {
     setDraggingNode(null);
   };
 
-  const handleOutputClick = (nodeId, outputName) => {
-    if (connecting) {
-      // Can't connect output to output, cancel
-      setConnecting(null);
-    } else {
-      // Start a connection
-      setConnecting({ nodeId, outputName });
-    }
-  };
-
-  const handleInputClick = (nodeId, inputName) => {
-    if (connecting && connecting.nodeId !== nodeId) {
-      const newConnection = {
-        id: `conn-${Date.now()}`,
-        from: { nodeId: connecting.nodeId, output: connecting.outputName },
-        to: { nodeId, input: inputName }
-      };
-      setConnections([...connections, newConnection]);
-      setConnecting(null);
+  const handleNodeClick = (nodeId, type) => {
+    // type is 'output' or 'input'
+    if (type === 'output') {
+      if (connecting) {
+        // Can't connect output to output, cancel
+        setConnecting(null);
+      } else {
+        // Start a connection from this node's output
+        setConnecting({ nodeId, type: 'output' });
+      }
+    } else if (type === 'input') {
+      if (connecting && connecting.nodeId !== nodeId && connecting.type === 'output') {
+        // Complete the connection
+        const newConnection = {
+          id: `conn-${Date.now()}`,
+          from: { nodeId: connecting.nodeId },
+          to: { nodeId },
+          fieldMappings: [] // Will be configured later
+        };
+        setConnections([...connections, newConnection]);
+        setConnecting(null);
+        
+        // Auto-open mapping modal
+        setEditingConnection(newConnection.id);
+      }
     }
   };
 
@@ -197,6 +204,17 @@ function WorkflowBuilder() {
 
   const removeConnection = (connId) => {
     setConnections(connections.filter(c => c.id !== connId));
+    if (editingConnection === connId) {
+      setEditingConnection(null);
+    }
+  };
+
+  const updateConnectionMappings = (connId, mappings) => {
+    setConnections(connections.map(conn =>
+      conn.id === connId
+        ? { ...conn, fieldMappings: mappings }
+        : conn
+    ));
   };
 
   const calculateTotalPrice = () => {
@@ -244,8 +262,9 @@ function WorkflowBuilder() {
           inputs: n.parameters || {}
         })),
         connections: connections.map(c => ({
-          from: c.from,
-          to: c.to
+          from: { nodeId: c.from.nodeId },
+          to: { nodeId: c.to.nodeId },
+          fieldMappings: c.fieldMappings || []
         }))
       };
 
@@ -339,9 +358,11 @@ function WorkflowBuilder() {
               const x2 = toNode.x; // Left side of node
               const y2 = toNode.y + 70;
 
-              // Calculate midpoint for the label
+              // Calculate midpoint for interaction
               const midX = (x1 + x2) / 2;
               const midY = (y1 + y2) / 2;
+
+              const hasMapping = conn.fieldMappings && conn.fieldMappings.length > 0;
 
               return (
                 <g key={conn.id}>
@@ -350,27 +371,30 @@ function WorkflowBuilder() {
                     y1={y1}
                     x2={x2}
                     y2={y2}
-                    stroke="var(--terminal-green)"
+                    stroke={hasMapping ? "var(--terminal-green)" : "#ffaa00"}
                     strokeWidth="2"
                     strokeDasharray="5,5"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => setEditingConnection(conn.id)}
                   />
+                  {/* Configure button */}
                   <circle
                     cx={midX}
                     cy={midY}
-                    r="8"
-                    fill="var(--terminal-green)"
-                    onClick={() => removeConnection(conn.id)}
+                    r="12"
+                    fill={hasMapping ? "var(--terminal-green)" : "#ffaa00"}
+                    onClick={() => setEditingConnection(conn.id)}
                     style={{ cursor: 'pointer' }}
                   />
                   <text
                     x={midX}
-                    y={midY + 3}
+                    y={midY + 4}
                     fill="#000"
-                    fontSize="10"
+                    fontSize="11"
                     textAnchor="middle"
                     style={{ pointerEvents: 'none', fontWeight: 'bold' }}
                   >
-                    X
+                    {hasMapping ? '✓' : '?'}
                   </text>
                 </g>
               );
@@ -427,40 +451,30 @@ function WorkflowBuilder() {
                   </div>
 
                   <div className="node-ports">
-                    {/* Input ports */}
-                    <div className="input-ports">
-                      {node.inputs.map((inputName, idx) => (
-                        <div
-                          key={`input-${idx}`}
-                          className="port input-port"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleInputClick(node.id, inputName);
-                          }}
-                          title={`Input: ${inputName}`}
-                        >
-                          <div className="port-dot"></div>
-                          <span className="port-label">{inputName}</span>
-                        </div>
-                      ))}
+                    {/* Input area - click to connect */}
+                    <div 
+                      className={`connection-area input-area ${connecting?.type === 'output' ? 'can-connect' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNodeClick(node.id, 'input');
+                      }}
+                      title="Click to connect input"
+                    >
+                      <div className="port-dot"></div>
+                      <span>INPUT</span>
                     </div>
 
-                    {/* Output ports */}
-                    <div className="output-ports">
-                      {node.outputs.map((outputName, idx) => (
-                        <div
-                          key={`output-${idx}`}
-                          className="port output-port"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOutputClick(node.id, outputName);
-                          }}
-                          title={`Output: ${outputName}`}
-                        >
-                          <span className="port-label">{outputName}</span>
-                          <div className="port-dot"></div>
-                        </div>
-                      ))}
+                    {/* Output area - click to start connection */}
+                    <div 
+                      className={`connection-area output-area ${!connecting ? 'can-connect' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNodeClick(node.id, 'output');
+                      }}
+                      title="Click to connect output"
+                    >
+                      <span>OUTPUT</span>
+                      <div className="port-dot"></div>
                     </div>
                   </div>
 
@@ -505,7 +519,7 @@ function WorkflowBuilder() {
         </button>
         {connecting && (
           <span className="connecting-indicator">
-            &gt;&gt; CONNECTING... (CLICK INPUT PORT TO COMPLETE)
+            &gt;&gt; CONNECTING... (CLICK INPUT AREA ON TARGET NODE)
           </span>
         )}
         {executionResults && (
@@ -528,6 +542,24 @@ function WorkflowBuilder() {
             setEditingNode(null);
           }}
           onClose={() => setEditingNode(null)}
+        />
+      )}
+
+      {/* Connection Mapping Modal */}
+      {editingConnection && (
+        <ConnectionMappingModal
+          connection={connections.find(c => c.id === editingConnection)}
+          nodes={nodes}
+          apiSchemas={apiSchemas}
+          onSave={(mappings) => {
+            updateConnectionMappings(editingConnection, mappings);
+            setEditingConnection(null);
+          }}
+          onDelete={() => {
+            removeConnection(editingConnection);
+            setEditingConnection(null);
+          }}
+          onClose={() => setEditingConnection(null)}
         />
       )}
 
@@ -623,6 +655,138 @@ function NodeConfigModal({ node, schema, onSave, onClose }) {
               </button>
               <button type="submit" className="save-btn">
                 [ SAVE ]
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Connection Mapping Modal Component
+function ConnectionMappingModal({ connection, nodes, apiSchemas, onSave, onDelete, onClose }) {
+  const fromNode = nodes.find(n => n.id === connection.from.nodeId);
+  const toNode = nodes.find(n => n.id === connection.to.nodeId);
+  
+  const fromSchema = apiSchemas[fromNode?.api.endpoint] || {};
+  const toSchema = apiSchemas[toNode?.api.endpoint] || {};
+
+  // Get available output fields from source node
+  const availableOutputs = fromNode?.outputs || [];
+  
+  // Get available input fields from target node
+  const availableInputs = toNode?.inputs || [];
+
+  const [mappings, setMappings] = useState(connection.fieldMappings || []);
+
+  const addMapping = () => {
+    setMappings([...mappings, { from: '', to: '' }]);
+  };
+
+  const removeMapping = (index) => {
+    setMappings(mappings.filter((_, i) => i !== index));
+  };
+
+  const updateMapping = (index, field, value) => {
+    const updated = [...mappings];
+    updated[index][field] = value;
+    setMappings(updated);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Filter out incomplete mappings
+    const validMappings = mappings.filter(m => m.from && m.to);
+    onSave(validMappings);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="mapping-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <span>CONFIGURE CONNECTION: {fromNode?.api.name} → {toNode?.api.name}</span>
+          <button className="close-btn" onClick={onClose}>X</button>
+        </div>
+        
+        <div className="modal-body">
+          <form onSubmit={handleSubmit}>
+            <p className="modal-hint">&gt;&gt; MAP OUTPUT FIELDS TO INPUT FIELDS</p>
+            
+            <div className="mapping-list">
+              {mappings.length === 0 ? (
+                <div className="no-mappings">
+                  <p>No field mappings configured.</p>
+                  <p>Click [+ ADD MAPPING] to connect fields.</p>
+                </div>
+              ) : (
+                mappings.map((mapping, index) => (
+                  <div key={index} className="mapping-row">
+                    <div className="mapping-field">
+                      <label>From (Output):</label>
+                      <select
+                        value={mapping.from}
+                        onChange={(e) => updateMapping(index, 'from', e.target.value)}
+                        required
+                      >
+                        <option value="">Select output field...</option>
+                        {availableOutputs.map(output => (
+                          <option key={output} value={output}>{output}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div className="mapping-arrow">→</div>
+                    
+                    <div className="mapping-field">
+                      <label>To (Input):</label>
+                      <select
+                        value={mapping.to}
+                        onChange={(e) => updateMapping(index, 'to', e.target.value)}
+                        required
+                      >
+                        <option value="">Select input field...</option>
+                        {availableInputs.map(input => (
+                          <option key={input} value={input}>{input}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <button 
+                      type="button" 
+                      onClick={() => removeMapping(index)}
+                      className="remove-btn"
+                      title="Remove mapping"
+                    >
+                      X
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+            
+            <button 
+              type="button" 
+              onClick={addMapping}
+              className="add-mapping-btn"
+            >
+              [ + ADD MAPPING ]
+            </button>
+            
+            <div className="modal-actions">
+              <button 
+                type="button" 
+                onClick={onDelete} 
+                className="delete-btn"
+              >
+                [ DELETE CONNECTION ]
+              </button>
+              <div style={{ flex: 1 }}></div>
+              <button type="button" onClick={onClose} className="cancel-btn">
+                [ CANCEL ]
+              </button>
+              <button type="submit" className="save-btn">
+                [ SAVE MAPPINGS ]
               </button>
             </div>
           </form>

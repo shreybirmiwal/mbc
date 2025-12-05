@@ -1004,18 +1004,25 @@ def execute_workflow():
             # Build inputs for this node
             node_inputs = node.get("inputs", {}).copy()
             
-            # Map outputs from previous nodes
+            # Map outputs from previous nodes based on field mappings
             for conn in incoming[current_id]:
                 if conn["from"]["nodeId"] in node_results:
                     from_result = node_results[conn["from"]["nodeId"]]
-                    output_key = conn["from"].get("output", "output")
-                    input_key = conn["to"].get("input", "input")
+                    field_mappings = conn.get("fieldMappings", [])
                     
-                    # Extract the output value
-                    if isinstance(from_result, dict) and output_key in from_result:
-                        node_inputs[input_key] = from_result[output_key]
+                    if field_mappings:
+                        # Use explicit field mappings
+                        for mapping in field_mappings:
+                            from_field = mapping.get("from")
+                            to_field = mapping.get("to")
+                            
+                            if from_field and to_field:
+                                # Extract the value from the source
+                                if isinstance(from_result, dict) and from_field in from_result:
+                                    node_inputs[to_field] = from_result[from_field]
                     else:
-                        node_inputs[input_key] = from_result
+                        # No mappings configured - pass entire result as 'input'
+                        node_inputs["input"] = from_result
             
             # Execute the API call
             try:

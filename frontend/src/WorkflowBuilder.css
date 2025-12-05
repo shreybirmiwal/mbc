@@ -224,65 +224,73 @@
   font-weight: bold;
 }
 
-/* Ports */
+/* Connection Areas */
 .node-ports {
   display: flex;
   justify-content: space-between;
+  gap: 1rem;
   margin-top: 0.75rem;
   padding-top: 0.75rem;
   border-top: 1px dashed var(--terminal-dim);
 }
 
-.input-ports,
-.output-ports {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.port {
+.connection-area {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid var(--terminal-dim);
+  background: rgba(0, 0, 0, 0.3);
   cursor: pointer;
-  padding: 0.25rem 0.5rem;
   transition: all 0.2s;
+  font-size: 0.85rem;
+  color: var(--terminal-dim);
 }
 
-.port:hover {
+.connection-area:hover {
+  border-color: var(--terminal-green);
   background: rgba(0, 255, 65, 0.1);
+  color: var(--terminal-green);
+}
+
+.connection-area.can-connect {
+  border-color: var(--terminal-green);
+  background: rgba(0, 255, 65, 0.15);
+  animation: pulse-border 1s infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(0, 255, 65, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(0, 255, 65, 0.6);
+  }
 }
 
 .port-dot {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border: 2px solid var(--terminal-green);
   border-radius: 50%;
   background: rgba(0, 255, 65, 0.3);
   transition: all 0.2s;
 }
 
-.port:hover .port-dot {
+.connection-area:hover .port-dot {
   background: var(--terminal-green);
   box-shadow: 0 0 8px var(--terminal-green);
 }
 
-.port-label {
-  font-size: 0.75rem;
-  color: var(--terminal-dim);
-  text-transform: uppercase;
-  max-width: 100px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.input-port {
+.input-area {
   flex-direction: row;
+  justify-content: flex-start;
 }
 
-.output-port {
+.output-area {
   flex-direction: row-reverse;
+  justify-content: flex-start;
 }
 
 /* Controls */
@@ -677,4 +685,106 @@ button:disabled:hover {
   background: rgba(0, 0, 0, 0.7);
   color: var(--terminal-green);
   box-shadow: none;
+}
+
+/* Connection Mapping Modal */
+.mapping-modal {
+  background: rgba(5, 15, 5, 0.98);
+  border: 2px solid var(--terminal-green);
+  width: 90%;
+  max-width: 700px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 30px rgba(0, 255, 65, 0.5);
+}
+
+.mapping-list {
+  margin-bottom: 1.5rem;
+}
+
+.no-mappings {
+  text-align: center;
+  padding: 2rem;
+  color: var(--terminal-dim);
+  border: 1px dashed var(--terminal-dim);
+}
+
+.mapping-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--terminal-dim);
+}
+
+.mapping-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mapping-field label {
+  color: var(--terminal-dim);
+  font-size: 0.9rem;
+}
+
+.mapping-field select {
+  background: #000;
+  border: 1px solid var(--terminal-dim);
+  color: var(--terminal-green);
+  padding: 0.5rem;
+  font-family: 'VT323', monospace;
+  font-size: 1rem;
+}
+
+.mapping-field select:focus {
+  outline: none;
+  border-color: var(--terminal-green);
+  box-shadow: 0 0 5px rgba(0, 255, 65, 0.3);
+}
+
+.mapping-arrow {
+  font-size: 1.5rem;
+  color: var(--terminal-green);
+  padding-bottom: 0.5rem;
+}
+
+.add-mapping-btn {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  border: 2px dashed var(--terminal-dim);
+  color: var(--terminal-dim);
+  padding: 0.75rem;
+  font-family: 'VT323', monospace;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 1.5rem;
+}
+
+.add-mapping-btn:hover {
+  border-color: var(--terminal-green);
+  color: var(--terminal-green);
+  background: rgba(0, 255, 65, 0.1);
+}
+
+.delete-btn {
+  background: rgba(255, 0, 0, 0.1);
+  border: 2px solid #ff0000;
+  color: #ff0000;
+  padding: 0.75rem 1.5rem;
+  font-family: 'VT323', monospace;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: bold;
+}
+
+.delete-btn:hover {
+  background: #ff0000;
+  color: #000;
 }
