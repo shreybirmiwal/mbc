@@ -419,5 +419,18 @@
                 }
             }
         }
+    },
+    {
+        "name": "qwiieiewqieiqwewqieqieq",
+        "endpoint": "/wwwwwww",
+        "target_url": "https://lecturecapture.la.utexas.edu/player/episode/104e5472-4af2-4e69-8dde-06e18d0e0ea1",
+        "method": "GET",
+        "wallet_address": "0xaf05dB6c0148F42e70eDBaB9357DD0D4edb6d1a4",
+        "description": "sjsj",
+        "token_address": "0x3b8e5f69d4763266343dbd8e6fd6aac638911fa0",
+        "symbol": "QWIAPI",
+        "token_uri": "ipfs://QmQkgcYzov79LEd21uB4hAqyQUjxfx6N4KoJxn9nFKJ8sY",
+        "tx_hash": "0x15966e59c9830ea8389de9bc3312966492e35431b42aa4d60a0b3e820f0561de",
+        "flaunch_link": "https://flaunch.gg/base/coin/0x3b8e5f69d4763266343dbd8e6fd6aac638911fa0"
     }
 ]
